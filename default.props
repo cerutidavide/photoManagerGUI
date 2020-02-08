@@ -1,5 +1,6 @@
-masterrepository=/Volumes/TOSHIBAEXT/MASTERFoto/
-importfolder=/tmp
+masterrepository=/Users/us01621/ArchivioFoto/
+importfolder=/Users/davideceruti/TestCase
+importfilelist=.importfile.lst
 #importfolder=/tmp
 #masterrepositorysize=57
 #backlogfile=backlog.txt
