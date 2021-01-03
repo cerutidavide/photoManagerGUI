@@ -9,8 +9,7 @@ import wx
 
 
 # service PROC
-
-
+#TODO platform indipendence ma prima porting su windows
 #TODO scremare immagini e altri tipi di file eventualmente spostando i file uso il comando file?
 #TODO aggiungere i log al livello giusto
 #TODO GESTIONE ERRORI DA MIGLIORARE
@@ -44,7 +43,7 @@ def loadFileExtensionList(filepath="/tmp/",extensionList=[],firstcall=True):
     return extensionList
     pass
 
-def CheckAndLoadProperties(workingdir='/Users/us01621/SviluppoDavide/PycharmProjects/photoManagerGUI',filenameGlob="default.props",filenameMstr=".masterrepository.conf"):
+def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photoManagerGUI',filenameGlob="default.props",filenameMstr=".masterrepository.conf"):
     myHashGlob={}
     myHashGlob['fileconfprincipale']=filenameGlob
     logging.debug("fileconfprincipale: "+filenameGlob)
@@ -63,7 +62,7 @@ def CheckAndLoadProperties(workingdir='/Users/us01621/SviluppoDavide/PycharmProj
             if match:
                 myHashGlob['importfilelist'] = match[1]
     logging.debug(myHashGlob)
-    with open(myHashGlob['masterrepository']+filenameMstr, encoding="utf-8") as f:
+    with open(myHashGlob['masterrepository']+'\\'+filenameMstr, encoding="utf-8") as f:
         for line in f.readlines():
             match = re.search('^masterrepositoryfilelist=(.*)', line)
             if match:
@@ -227,22 +226,34 @@ class PhotoManagerAppFrame(wx.Frame):
 
             #scrivo nel file True?
     def CostruisciMaster(self, dir="/Users/davideceruti/TestCase/"):
-            f = open(self.globpropsHash['masterrepository']+self.globpropsHash["masterrepositoryfilelist"], 'a', encoding="UTF-8")
+            f = open(self.globpropsHash['masterrepository']+'\\'+self.globpropsHash["masterrepositoryfilelist"], 'a', encoding="UTF-8")
             #print(str(f))
             for file in os.listdir(dir):
-                if os.path.isdir(dir + "/" + file):
-                    self.CostruisciMaster(dir + "/" + file)
+                if os.path.isdir(dir + "\\" + file):
+                    self.CostruisciMaster(dir + "\\" + file)
                     pass
                 else:
                     #print(dir+"/"+file)
-                    fileconpath=dir+"/"+file
+                    fileconpath=dir+"\\"+file
                     match2=re.search('^\..*',file)
                     if match2 is None:
                         if fileconpath not in self.mstrfileHash.keys():
-                            p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,
-                            stdout=subprocess.PIPE)
-                            match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
-                            f.writelines(match[1]+"|"+match[2]+"\n")
+
+                            #
+                            #MD5 hash di D:\ArchivioFoto\2000\Aug\006d7fbd3a92260bbc28cfa812c92b56.jpg:
+                            #006d7fbd3a92260bbc28cfa812c92b56
+                            #CertUtil: - Esecuzione comando hashfile riuscita.
+                            #
+                            md5command='certutil -hashfile ' + dir + '\\' + file + ' MD5'
+                            logging.debug(md5command)
+                            p = subprocess.run(md5command, shell=True,universal_newlines=True,stdout=subprocess.PIPE)
+                            #p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,
+                            #stdout=subprocess.PIPE)
+                            #match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
+                            filerow=dir+'\\'+file+'|'+str(p.stdout).split('\n')[1]+'\n'
+                            f.writelines(filerow)
+                            logging.debug(filerow)
+                            #f.writelines(match[1] + "|" + match[2] + "\n")
                             self.gauge.SetValue((self.gauge.GetValue() + 1))
                             PhotoManagerApp.Yield()
                 if self.checkRunning is False:
@@ -271,10 +282,12 @@ class PhotoManagerAppFrame(wx.Frame):
 
                         PhotoManagerApp.Yield()
                         match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
-                        f2.writelines(match[1] + "|" + match[2] + "\n")
+                        filename = match[1]
+                        md5code = match[2]
+                        f2.writelines(filename + "|" + md5code + "\n")
                         f2.flush()
                         #print("GAUGEVALUE"+str(self.gauge.GetValue()))
-
+                        #MD5(tesinaFrancesco.key) = 8025068626c71ef8fe6853e361244b66
                         #PhotoManagerApp.Yield()
             if self.checkRunning is False:
                 break

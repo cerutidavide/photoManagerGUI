@@ -1,5 +1,5 @@
 import logging
-import magic
+import magic_python
 import os
 import re
 import shutil
@@ -69,7 +69,7 @@ def logDuplicati(duplicatedListDict={}):
     pass
 
 
-def CheckAndLoadProperties(workingdir='/Users/us01621/SviluppoDavide/PycharmProjects/photoManagerGUI',
+def CheckAndLoadProperties(workingdir='c:\Users\Davide\PycharmProjects\photoManagerGUI',
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
     myHashGlob['fileconfprincipale'] = filenameGlob
@@ -132,7 +132,7 @@ def calcNumberOfFile(filepath='/tmp/',numfile={},firstcall=True):
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title):
-        logging.basicConfig(filename='/Users/us01621/PhotoArchive.log', level=logging.INFO)
+        logging.basicConfig(filename='c:\Users\Davide\PhotoArchive.log', level=logging.INFO)
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         self.checkRunning = True
         self.globpropsHash = CheckAndLoadProperties()
@@ -176,7 +176,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
 
 
-        numOfFile=calcNumberOfFile('/Users/us01621/ArchivioFoto/', {}, True)
+        numOfFile=calcNumberOfFile('c:\Users\Davide\ArchivioFoto', {}, True)
         self.gauge.SetRange(numOfFile['files'])
 
         #self.gauge.SetRange(calcNumberOfFile(self.importDirList.GetPath(),0,True))
@@ -391,7 +391,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
             # scrivo nel file True?
 
-    def CostruisciMaster(self, dir="/Users/davideceruti/TestCase/"):
+    def CostruisciMaster(self, dir="/Users/Davide/TestCase/"):
         f = open(self.globpropsHash['masterrepository'] + self.globpropsHash["masterrepositoryfilelist"], 'a',
                  encoding="UTF-8")
         # print(str(f))
