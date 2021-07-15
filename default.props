@@ -1,16 +1,3 @@
-masterrepository=D:\ArchivioFoto
-importfolder=/Users/Davide/
+masterrepository=D:\ArchivioTestFoto
+importfolder=D:\TestImport\
 importfilelist=.importfile.lst
-#importfolder=/tmp
-#masterrepositorysize=57
-#backlogfile=backlog.txt
-#masterrepositoryconf=.masterrepository.conf
-#i file lst e conf vengono creati nel path masterrepository
-#
-#importfile=importfile.lst
-####
-####
-####
-##ciao #ciao
-un commento #inizia a metà
-unarigasenzauguale

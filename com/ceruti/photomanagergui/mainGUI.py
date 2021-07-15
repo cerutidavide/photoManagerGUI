@@ -183,20 +183,20 @@ class PhotoManagerAppFrame(wx.Frame):
         #self.gauge.setRange(???)
 
         if os.path.isfile(self.globpropsHash['masterrepository']+self.globpropsHash['masterrepositoryfilelist']) and self.globpropsHash['masterrepositoryisready']=='True':  #il file elenco esiste ed è completo Costruisci ha finito di girare
-            #print("Archivio: "+self.globpropsHash['masterrepository']+" a posto!")
+            print("Archivio: "+self.globpropsHash['masterrepository']+" a posto!")
             self.gauge.SetValue(self.gauge.GetRange())
             pass
         else:
             #
             os.chmod(self.globpropsHash['masterrepository'], 0o700)
-            if os.path.exists(self.globpropsHash['masterrepository'] + self.globpropsHash["masterrepositoryfilelist"]):
-                f = open(self.globpropsHash['masterrepository'] + self.globpropsHash["masterrepositoryfilelist"], 'r',encoding="UTF-8")
+            if os.path.exists(self.globpropsHash['masterrepository'] +'\\'+ self.globpropsHash["masterrepositoryfilelist"]):
+                f = open(self.globpropsHash['masterrepository'] + '\\'+self.globpropsHash["masterrepositoryfilelist"], 'r',encoding="UTF-8")
             else:
-                f = open(self.globpropsHash['masterrepository'] + self.globpropsHash["masterrepositoryfilelist"], 'x',encoding="UTF-8")
+                f = open(self.globpropsHash['masterrepository'] + '\\'+self.globpropsHash["masterrepositoryfilelist"], 'x',encoding="UTF-8")
                 f.write("")
             for line in f.readlines():
                 match=re.search('(^.*)\|(.*$)',line)
-                #print("TRACE: "+line)
+                print("TRACE: "+line)
                 self.gauge.SetValue(self.gauge.GetValue()+1)
                 if match is not None:
                     if match[1] not in self.mstrfileHash.keys():
@@ -254,6 +254,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             f.writelines(filerow)
                             logging.debug(filerow)
                             #f.writelines(match[1] + "|" + match[2] + "\n")
+                            #NB su windows certutil output su più righe-> match non funziona più qui poi non acchiappo il nomefile dall'output del comando tanto lo so già prima
                             self.gauge.SetValue((self.gauge.GetValue() + 1))
                             PhotoManagerApp.Yield()
                 if self.checkRunning is False:
@@ -278,13 +279,20 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.gauge.SetValue((self.gauge.GetValue() + 1))
                         self.gauge.Refresh()
                         PhotoManagerApp.Yield()
-                        p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,stdout=subprocess.PIPE)
+                        #p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,stdout=subprocess.PIPE)
 
+                        md5command = 'certutil -hashfile ' + dir + '\\' + file + ' MD5'
+                        logging.debug(md5command)
+                        p = subprocess.run(md5command, shell=True, universal_newlines=True,
+                                           stdout=subprocess.PIPE)
                         PhotoManagerApp.Yield()
-                        match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
-                        filename = match[1]
-                        md5code = match[2]
-                        f2.writelines(filename + "|" + md5code + "\n")
+                        #match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
+                        #filename = match[1]
+                        #md5code = match[2]
+                        filerow = dir + '\\' + file + '|' + str(p.stdout).split('\n')[1] + '\n'
+                        f2.writelines(filerow)
+                        logging.debug(filerow)
+                        #f2.writelines(filename + "|" + md5code + "\n")
                         f2.flush()
                         #print("GAUGEVALUE"+str(self.gauge.GetValue()))
                         #MD5(tesinaFrancesco.key) = 8025068626c71ef8fe6853e361244b66
