@@ -332,7 +332,7 @@ class PhotoManagerAppFrame(wx.Frame):
             #calcolo MD5, se chiave esiste lo metto nell'hash degli scarti se no lo metto in quelli da copiare con tutto quello che serve
         #dict key=MD5, valore tupla (path master, "")
         #sbiancare mstrHash
-        with open(self.globpropsHash['masterrepository'] + self.globpropsHash["masterrepositoryfilelist"], 'r',
+        with open(self.globpropsHash['masterrepository'] +"/"+ self.globpropsHash["masterrepositoryfilelist"], 'r',
                  encoding="UTF-8") as f:
 
             for line in f.readlines():
