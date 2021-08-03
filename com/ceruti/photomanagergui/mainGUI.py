@@ -431,7 +431,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
         #print("FILE SKIPPATI")
-        #print(self.skippedfileHash)
+        print(self.skippedfileHash)
         self.gauge.SetValue(0)
         PhotoManagerApp.Yield()
 
