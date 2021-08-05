@@ -4,44 +4,39 @@ import re
 import shutil
 import subprocess
 import time
-
 import wx
 
-
-# service PROC
 #TODO platform indipendence ma prima porting su windows
 #TODO scremare immagini e altri tipi di file eventualmente spostando i file uso il comando file?
 #TODO aggiungere i log al livello giusto
 #TODO GESTIONE ERRORI DA MIGLIORARE
 #TODO far capire cosa succede
 #TODO IMPOSTARE CORRETTAMENTE I PERMESSI
-#TODO cambiare i nomi dei file con vecchionome.nuovonoveconmd5.estensione
+#TODO cambiare i nomi dei file con vecchionome.nuovonoveconmd5.estensione ??
 #TODO sistemare pulsanti e barre di avanzamento
-
-def loadFileExtensionList(filepath="/tmp/",extensionList=[],firstcall=True):
-    print("FILEPATH A GIRI SUCCESSIVI: "+filepath)
+#TODO attenzione a mettere le virgolette a inizio e fine nome file!!!!!
+#TODO ancora più importante controllare modalità apertura file (append vs truncate vs readonly)
+#TODO mettere il mese in numero
+def loadFileExtensionList(self,filepath="/tmp/",extensionList=[],firstcall=True):
     if firstcall is True:
         extensionList=[]
     try:
         for file in os.listdir(filepath):
-            #print(file)
             if os.path.isdir(filepath+"/"+file):
-                loadFileExtensionList(filepath+"/"+file,extensionList,False)
+                loadFileExtensionList(self,filepath+"/"+file,extensionList,False)
                 pass
             else:
-                #print(dir+"/"+file)
                 ext=os.path.splitext(filepath+"/"+file)
-                #print(">>>>>>>>"+ext[1])
                 if ext[1] !="":
                     if ext[1] not in extensionList:
                         extensionList.append(ext[1])
-
-    except:
-        print("something went wrong with reading folders")
-
-    print("PERCHE?"+str(extensionList))
+                        logging.debug("Aggiunta "+ext[1]+" alla lista delle estensioni")
+                        self.gauge.SetValue(self.gauge.GetValue()+1)
+                        if self.gauge.GetValue()>=self.gauge.GetRange():
+                            self.gauge.SetValue(0)
+    except Exception as e:
+        print(e)
     return extensionList
-    pass
 
 def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photoManagerGUI',filenameGlob="default.props",filenameMstr=".masterrepository.conf"):
     myHashGlob={}
@@ -76,101 +71,62 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
     logging.debug("Dopo caricamento repository: "+str(myHashGlob))
     return myHashGlob
 
-#INTERFACCIA GRAFICA APPLICAZIONE
-
-
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self,parent,title):
-        logging.basicConfig(level=logging.DEBUG)
+        logging.root.setLevel('DEBUG')
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
+        max_gauge_size=675
         self.checkRunning=True
-        self.globpropsHash=CheckAndLoadProperties()
+        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
         logging.debug(str(self.globpropsHash))
-
         self.importDirFileExtensions={}
         self.importfileHash={}
         self.importMd5fileHash={}
-        self.mstrfileHash={}  #hash di servizio per il caricamento del file parziale
-
+        self.mstrfileHash={}
         self.copyfileHash={}
         self.skippedfileHash={}
-
         self.loggingDict={}
-
         self.contatoreDebug=0
-
         self.labelDirList = wx.StaticText(self, label="Import Folder:", pos=(5, 5))
         self.importDirList=wx.GenericDirCtrl(self,pos=(5,25),size=(345,200),style=wx.DIRCTRL_DIR_ONLY)
         self.importDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED,self.SelezionaImportFolder)
-
         self.avviaCreaListaMaster = wx.Button(self, label="Avvia Creazione Lista File Master", pos=(5, 230), size=(345, -1))
         self.avviaCreaListaMaster.Bind(wx.EVT_BUTTON, self.AvviaCostruisciMaster)
-
         self.interrompiControllo=wx.Button(self,label="Interrompi",pos=(5, 255), size=(345, -1))
         self.interrompiControllo.Bind(wx.EVT_BUTTON, self.InterrompiFileListCheck)
-
-        self.gauge = wx.Gauge(self, pos=(5, 560), size=(690, -1))
+        self.gauge = wx.Gauge(self, pos=(5, 540),size=(max_gauge_size,-1))
+        self.gauge.SetRange(max_gauge_size)
         self.gauge.SetValue(0)
-
-
-
         self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file presenti nel folder Import ", pos=(5, 300))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
-
         self.avviaCopiaFile = wx.Button(self, label="Avvia Copia File nel Master", pos=(5, 325))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
-
         self.esci=wx.Button(self,label="ESCI",pos=(5,450),size=(350,-1))
         self.esci.Bind(wx.EVT_BUTTON,self.Esci)
-
-
-
-
-
-
         self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),pos=(355, 25))
         self.loggedCopied = wx.TextCtrl(self,pos=(355, 225))
-
         self.SetFocus()
-
         self.loggerFS=logging.getLogger("filesystemstuff")
-
-
-
-
-
-
-
         self.Center()
         self.Show(True)
 
-
     def stringFormattedHash(self):
         result=""
-        #print("TRACE5")
-        #print(self.globpropsHash.keys())
         for k in self.globpropsHash.keys():
-            #print(k)
-            #print(self.globpropsHash[k])
-            #result=result+self.globpropsHash[k]
             result=result+k+" = "+str(self.globpropsHash[k])+"\n"
         return result
-
-#ACTIONS
 
     def SelezionaImportFolder(self,evt):
         self.globpropsHash['importfolder']=self.importDirList.GetPath()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
 
     def AvviaCaricaEstensioni(self,evt):
-        #self.importDirFileExtensions = loadFileExtensionList(self.globpropsHash['importfolder'])
         self.SelezionaImportFolder(evt)
-        print(self.globpropsHash['importfolder'])
-        #self.globpropsHash['importfolder'] = self.importDirList.GetPath()
-
-        self.messageExtension=wx.MessageBox("Nel folder import ci sono i seguenti tipi di file: \n"+str(loadFileExtensionList(self.globpropsHash['importfolder'],True)),'',wx.CLOSE)
-
-        #print(loadFileExtensionList(self.globpropsHash['importfolder']))
+        messaggioEstensioni=str(loadFileExtensionList(self,self.globpropsHash['importfolder'],True))
+        self.gauge.SetValue(self.gauge.GetRange())
+        self.messageExtension=wx.MessageBox("Nel folder import ci sono i seguenti tipi di file: \n"+messaggioEstensioni,'',wx.CLOSE)
+        logging.info(messaggioEstensioni)
+        self.gauge.SetValue(0)
 
     def Esci(self,evt):
         self.InterrompiFileListCheck(evt)
@@ -180,14 +136,14 @@ class PhotoManagerAppFrame(wx.Frame):
     def AvviaCostruisciMaster(self,evt):
         self.checkRunning = True
         self.gauge.SetValue(0)
-        #self.gauge.setRange(???)
-
-        if os.path.isfile(self.globpropsHash['masterrepository']+self.globpropsHash['masterrepositoryfilelist']) and self.globpropsHash['masterrepositoryisready']=='True':  #il file elenco esiste ed è completo Costruisci ha finito di girare
-            print("Archivio: "+self.globpropsHash['masterrepository']+" a posto!")
+        logging.debug("Massimo valore Gauge: "+str(self.gauge.GetRange()))
+        self.gauge.Pulse()
+        n=self.gauge.GetRange()//4
+        if os.path.isfile(self.globpropsHash['masterrepository']+self.globpropsHash['masterrepositoryfilelist']) and self.globpropsHash['masterrepositoryisready']=='True':
+            logging.info("L\'archivio: "+self.globpropsHash['masterrepository']+" è a posto!")
             self.gauge.SetValue(self.gauge.GetRange())
             pass
         else:
-            #
             os.chmod(self.globpropsHash['masterrepository'], 0o700)
             if os.path.exists(self.globpropsHash['masterrepository'] +'\\'+ self.globpropsHash["masterrepositoryfilelist"]):
                 f = open(self.globpropsHash['masterrepository'] + '\\'+self.globpropsHash["masterrepositoryfilelist"], 'r',encoding="UTF-8")
@@ -196,63 +152,59 @@ class PhotoManagerAppFrame(wx.Frame):
                 f.write("")
             for line in f.readlines():
                 match=re.search('(^.*)\|(.*$)',line)
-                print("TRACE: "+line)
+                matchmd5=re.search('\|([a-f\d]{32}|[A-F\d]{32})',line)
                 self.gauge.SetValue(self.gauge.GetValue()+1)
-                if match is not None:
-                    if match[1] not in self.mstrfileHash.keys():
-                        self.mstrfileHash[match[1]]=match[2]
+                if matchmd5 is not None:
+                    logging.debug('AvviaCostruisciMaster.Md5Hash.VALIDO: '+str(matchmd5[1]))
+                    if match is not None:
+                        if match[1] not in self.mstrfileHash.keys():
+                            n+=1
+                            self.mstrfileHash[match[1]]=match[2]
+                            logging.info('AvviaCostruisciMaster.AggiuntoFileAllaListaMaster: '+str(match[1]))
+                            self.gauge.SetValue(n)
+                else:
+                    logging.error('AvviaCostruisciMaster.Md5Hash.NON.VALIDO.nellariga: '+line)
             f.close()
             for key in self.mstrfileHash.keys():
                 if os.path.exists(key):
                     pass
                 else:
-                    print(">>>>>WARNING>>>>>> "+"il file "+key+" non esiste si consiglia di cancellare la riga relativa nel file: ")
-                    print(self.globpropsHash['masterrepository']+"/"+self.globpropsHash['masterrepositoryfilelist'])
-
-            #print("TRACE2: ")
-            #print(self.mstrfileHash.values())
-            #print(len(self.mstrfileHash))
+                    logging.error("Il file "+key+" non esiste si consiglia di cancellare la riga relativa nel file: "+self.globpropsHash['masterrepository']+"/"+self.globpropsHash['masterrepositoryfilelist'])
             self.CostruisciMaster(self.globpropsHash['masterrepository'])
+            for key in self.mstrfileHash.keys():
+                logging.debug("File Presente in Archivio: "+key)
             if self.checkRunning is True:
-                #print("File completo")
-                self.mstrfileHash.clear()
+                print("File completo")
+                #self.mstrfileHash.clear()
+                #da verificare ma forse è questa clear da non fare per avere il master giusto (però se non lo svuoti ci sono un sacco di duplicati che non mi spiego
             self.globpropsHash['masterrepositoryisready']=True
             self.gauge.SetValue(self.gauge.GetRange())
+        dlg = wx.MessageBox('Costruzione Master Completata','',wx.OK)
+        self.gauge.SetValue(0)
 
-            #aggiungere qui il popup
-
-            dlg = wx.MessageBox('Costruzione Master Completata','',wx.OK)
-            print(self.mstrfileHash)
-
-            #scrivo nel file True?
     def CostruisciMaster(self, dir="/Users/davideceruti/TestCase/"):
             f = open(self.globpropsHash['masterrepository']+'\\'+self.globpropsHash["masterrepositoryfilelist"], 'a', encoding="UTF-8")
-            #print(str(f))
             for file in os.listdir(dir):
                 if os.path.isdir(dir + "\\" + file):
                     self.CostruisciMaster(dir + "\\" + file)
                     pass
                 else:
-                    #print(dir+"/"+file)
                     fileconpath=dir+"\\"+file
                     match2=re.search('^\..*',file)
                     if match2 is None:
                         if fileconpath not in self.mstrfileHash.keys():
-
-                            #
-                            #MD5 hash di D:\ArchivioFoto\2000\Aug\006d7fbd3a92260bbc28cfa812c92b56.jpg:
-                            #006d7fbd3a92260bbc28cfa812c92b56
-                            #CertUtil: - Esecuzione comando hashfile riuscita.
-                            #
                             md5command='certutil -hashfile ' + dir + '\\' + file + ' MD5'
-                            logging.debug(md5command)
+                            logging.debug('CostruisciMaster: '+md5command)
                             p = subprocess.run(md5command, shell=True,universal_newlines=True,stdout=subprocess.PIPE)
                             #p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,
                             #stdout=subprocess.PIPE)
                             #match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
                             filerow=dir+'\\'+file+'|'+str(p.stdout).split('\n')[1]+'\n'
-                            f.writelines(filerow)
-                            logging.debug(filerow)
+                            if p.returncode==0:
+                                f.writelines(filerow)
+                                logging.info("CostruisciMaster.Scrittura riga: "+filerow)
+                            else:
+                                logging.error("CostruisciMaster.ERRORE.FILE: "+filerow)
                             #f.writelines(match[1] + "|" + match[2] + "\n")
                             #NB su windows certutil output su più righe-> match non funziona più qui poi non acchiappo il nomefile dall'output del comando tanto lo so già prima
                             self.gauge.SetValue((self.gauge.GetValue() + 1))
@@ -263,7 +215,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
     def CostruisciImport(self,dir="tmp"):
-        f2 = open(self.globpropsHash['importfolder'] +"/" +self.globpropsHash["importfilelist"], 'a',
+        f2 = open(self.globpropsHash['importfolder'] +"/" +self.globpropsHash["importfilelist"], 'w',
                   encoding="UTF-8")
         # print(str(f))
         for file in os.listdir(dir):
@@ -280,23 +232,16 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.gauge.Refresh()
                         PhotoManagerApp.Yield()
                         #p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,stdout=subprocess.PIPE)
-
                         md5command = 'certutil -hashfile ' + dir + '\\' + file + ' MD5'
                         logging.debug(md5command)
                         p = subprocess.run(md5command, shell=True, universal_newlines=True,
                                            stdout=subprocess.PIPE)
                         PhotoManagerApp.Yield()
                         #match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
-                        #filename = match[1]
-                        #md5code = match[2]
                         filerow = dir + '\\' + file + '|' + str(p.stdout).split('\n')[1] + '\n'
                         f2.writelines(filerow)
                         logging.debug(filerow)
-                        #f2.writelines(filename + "|" + md5code + "\n")
                         f2.flush()
-                        #print("GAUGEVALUE"+str(self.gauge.GetValue()))
-                        #MD5(tesinaFrancesco.key) = 8025068626c71ef8fe6853e361244b66
-                        #PhotoManagerApp.Yield()
             if self.checkRunning is False:
                 break
         f2.close()
@@ -305,7 +250,10 @@ class PhotoManagerAppFrame(wx.Frame):
         self.checkRunning=False
 
     def AvviaCopiaFile(self,evt):
-        self.AvviaCostruisciMaster(evt)
+        #self.AvviaCostruisciMaster(evt)
+        #ATTENZIONE, se lanci avvia copia file sia che chiami avviaCostruisciMAster sia che non lo chiami, il master non si aggiorna.
+        #DA DECIDERE COsa fare...
+        logging.info("CONTROLLONE l'hash mstr ha "+str(len(self.mstrfileHash.items())))
         self.checkRunning = True
         self.gauge.SetValue(0)
         self.gauge.SetRange(len([name for name in os.listdir(self.globpropsHash['importfolder'])]))
@@ -434,40 +382,11 @@ class PhotoManagerAppFrame(wx.Frame):
         print(self.skippedfileHash)
         self.gauge.SetValue(0)
         PhotoManagerApp.Yield()
-
         for key in self.loggingDict.keys():
             logging.info(str(self.loggingDict[key]))
-
-            #self.loggedCopied.AppendText(self.loggingDict[key][0]+self.loggingDict[key][1]+"\n")
-
-
-
-
-
-
 if __name__ == '__main__':
-    #main ()
-
     PhotoManagerApp=wx.App()
     framePrincipale = PhotoManagerAppFrame(None,"PhotoManager")
     PhotoManagerApp.MainLoop()
 
-
-
-
-    # framePrincipaleImport=wx.Frame(None,title="PhotoManager",pos=p1)
-    # framePrincipaleMasterRepository=wx.Frame(None,title="PhotoManager")
-    # changeImportingFolder=wx.Button(framePrincipaleImport,label="Cambia",)
-    # changeMasterRepository=wx.Button(framePrincipaleMasterRepository,label="Cambia2")
-    #
-    #
-    #
-    #
-    # framePrincipaleImport.Show()
-    # framePrincipaleMasterRepository.Show()
-
-    #label = wx.StaticText(panel, label="Hello World", pos=(100, 50))
-    #PROPRIETA gestite:
-    #importfolder
-    #masterrepository
 
