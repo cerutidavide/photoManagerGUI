@@ -20,6 +20,8 @@ from send2trash import send2trash
 #TODO mettere il mese in numero
 #TODO radio button per dire se fai o no backup delle importate
 #TODO riorganizzare interfaccia grafica
+#TODO NB sistemare data con metadata giusti. EXIF
+
 def loadFileExtensionList(self,filepath="/tmp/",extensionList=[],firstcall=True):
     if firstcall is True:
         extensionList=[]
@@ -61,27 +63,28 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
             if match:
                 myHashGlob['importfilelist'] = match[1]
     logging.debug(myHashGlob)
-    with open(myHashGlob['masterrepository']+'\\'+filenameMstr, encoding="utf-8") as f:
-        for line in f.readlines():
-            match = re.search('^masterrepositoryfilelist=(.*)', line)
-            if match:
-                myHashGlob['masterrepositoryfilelist'] = match[1]
-            match = re.search('^masterrepositoryisready=(.*)', line)
-            if match:
-                myHashGlob['masterrepositoryisready'] = match[1]
-            match = re.search('^masterrepositorysize=(.*)',line)
-            if match:
-                myHashGlob['masterrepositorysize']=match[1]
+    # with open(myHashGlob['masterrepository']+'\\'+filenameMstr, encoding="utf-8") as f:
+    #     for line in f.readlines():
+    #         match = re.search('^masterrepositoryfilelist=(.*)', line)
+    #         if match:
+    #             myHashGlob['masterrepositoryfilelist'] = match[1]
+    #         match = re.search('^masterrepositoryisready=(.*)', line)
+    #         if match:
+    #             myHashGlob['masterrepositoryisready'] = match[1]
+    #         match = re.search('^masterrepositorysize=(.*)',line)
+    #         if match:
+    #             myHashGlob['masterrepositorysize']=match[1]
     logging.debug("Dopo caricamento repository: "+str(myHashGlob))
     return myHashGlob
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self,parent,title):
-        logging.root.setLevel('DEBUG')
+        logging.root.setLevel('INFO')
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size=675
         self.checkRunning=True
-        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
+        #self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
+        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager","default.props",".masterrepository.conf")
         logging.debug(str(self.globpropsHash))
         self.importDirFileExtensions={}
         self.importfileHash={}
@@ -178,7 +181,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaCopiaFile(self,evt):
         self.importDirError=0
-        self.CopiaFile()
+        self.CopiaFile(self.globpropsHash['importfolder'])
         self.mstrfileHash.clear()
         self.importfileHash.clear()
         self.copyfileHash.clear()
