@@ -6,6 +6,11 @@ import subprocess
 import time
 import wx
 from send2trash import send2trash
+from PIL import Image
+import pathlib
+from PIL import ExifTags
+from PIL.ExifTags import TAGS
+
 
 #TODO platform indipendence ma prima porting su windows
 #TODO scremare immagini e altri tipi di file eventualmente spostando i file uso il comando file?
@@ -83,8 +88,8 @@ class PhotoManagerAppFrame(wx.Frame):
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size=675
         self.checkRunning=True
-        #self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
-        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager","default.props",".masterrepository.conf")
+        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
+        #self.globpropsHash=CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager","default.props",".masterrepository.conf")
         logging.debug(str(self.globpropsHash))
         self.importDirFileExtensions={}
         self.importfileHash={}
@@ -143,6 +148,27 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(self.gauge.GetRange())
         self.messageExtension=wx.MessageBox("Nel folder import "+messaggioFolderImport+"\nci sono i seguenti tipi di file: \n"+messaggioEstensioni,'',wx.CLOSE)
         logging.info(messaggioEstensioni)
+        # for file in os.scandir(self.globpropsHash['importfolder']):
+        #     if file.is_dir():
+        #         logging.info("DIR: "+str(file.path))
+        #     else:
+        #         logging.info("FILE: "+str(file.path))
+        #         logging.info('MODIFIED Datetime: '+time.ctime(os.path.getmtime(file)))
+        #         logging.info('CREATED Datetime: '+time.ctime(os.path.getctime(file)))
+        #         with Image.open(pathlib.Path(file)) as image:
+        #             try:
+        #                 exifData = {}
+        #                 info = image.getexif()
+        #                 if info:
+        #                     for (tag, value) in info.items():
+        #                         decoded = TAGS.get(tag, tag)
+        #                         exifData[decoded] = value
+        #                         logging.debug(image.filename+' EXIF_TAG: '+str(decoded)+' '+str(value))
+        #                         if decoded=='DateTime':
+        #                             logging.info('EXIF DateTime: '+time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
+        #             except BaseException as e:
+        #                 pass
+        #                 logging.error(str(e))
         self.gauge.SetValue(0)
 
     def Esci(self,evt):
@@ -150,34 +176,34 @@ class PhotoManagerAppFrame(wx.Frame):
         pass
 
 
-    def CostruisciImport(self,dir="tmp"):
-        for file in os.listdir(dir):
-            if os.path.isdir(dir + "/" + file):
-                self.CostruisciImport(dir + "/" + file)
-                pass
-            else:
-                # print(dir+"/"+file)
-                fileconpath = dir + "/" + file
-                match2 = re.search('^\..*', file)
-                if match2 is None:
-                    if fileconpath not in self.importfileHash.keys():
-                        self.gauge.SetValue((self.gauge.GetValue() + 1))
-                        self.gauge.Refresh()
-                        PhotoManagerApp.Yield()
-                        #p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,stdout=subprocess.PIPE)
-                        md5command = 'certutil -hashfile ' + dir + '\\' + file + ' MD5'
-                        logging.debug(md5command)
-                        p = subprocess.run(md5command, shell=True, universal_newlines=True,
-                                           stdout=subprocess.PIPE)
-                        PhotoManagerApp.Yield()
-                        #match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
-                        filerow = dir + '\\' + file + '|' + str(p.stdout).split('\n')[1] + '\n'
-                        f2.writelines(filerow)
-                        logging.debug(filerow)
-                        f2.flush()
-            if self.checkRunning is False:
-                break
-        f2.close()
+    # def CostruisciImport(self,dir="tmp"):
+    #     for file in os.listdir(dir):
+    #         if os.path.isdir(dir + "/" + file):
+    #             self.CostruisciImport(dir + "/" + file)
+    #             pass
+    #         else:
+    #             # print(dir+"/"+file)
+    #             fileconpath = dir + "/" + file
+    #             match2 = re.search('^\..*', file)
+    #             if match2 is None:
+    #                 if fileconpath not in self.importfileHash.keys():
+    #                     self.gauge.SetValue((self.gauge.GetValue() + 1))
+    #                     self.gauge.Refresh()
+    #                     PhotoManagerApp.Yield()
+    #                     #p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,stdout=subprocess.PIPE)
+    #                     md5command = 'certutil -hashfile ' + dir + '\\' + file + ' MD5'
+    #                     logging.debug(md5command)
+    #                     p = subprocess.run(md5command, shell=True, universal_newlines=True,
+    #                                        stdout=subprocess.PIPE)
+    #                     PhotoManagerApp.Yield()
+    #                     #match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
+    #                     filerow = dir + '\\' + file + '|' + str(p.stdout).split('\n')[1] + '\n'
+    #                     f2.writelines(filerow)
+    #                     logging.debug(filerow)
+    #                     f2.flush()
+    #         if self.checkRunning is False:
+    #             break
+    #     f2.close()
 
     def AvviaCopiaFile(self,evt):
         self.importDirError=0
@@ -213,6 +239,29 @@ class PhotoManagerAppFrame(wx.Frame):
                         dstmonthfolder=time.strftime("%m",time.gmtime(os.path.getmtime(file)))
                         md5filename=str(p.stdout).split('\n')[1]
                         dstext=os.path.splitext(file)[1].lower()
+                        logging.info("FILE: "+str(file.path))
+                        with Image.open(pathlib.Path(file)) as image:
+                            try:
+                                exifData = {}
+                                info = image.getexif()
+                                if info:
+                                    for (tag, value) in info.items():
+                                        decoded = TAGS.get(tag, tag)
+                                        exifData[decoded] = value
+                                        logging.debug(image.filename+' EXIF_TAG: '+str(decoded)+' '+str(value))
+                                        if decoded=='DateTime':
+                                            logging.info("FILE: "+str(file.path)+" FILE_Anno/Mese: "+dstyearfolder+"/"+dstmonthfolder)
+                                            logging.debug('EXIF DateTime: '+time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
+                                            logging.debug('EXIF Presente Anno_PRE:'+dstyearfolder)
+                                            logging.debug('EXIF Presente Mese_PRE:'+dstmonthfolder)
+                                            dstyearfolder=time.strftime("%Y",time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                            dstmonthfolder=time.strftime("%m",time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                            logging.debug('EXIF Presente Anno_POST:'+dstyearfolder)
+                                            logging.debug('EXIF Presente Mese_POST:'+dstmonthfolder)
+                                            logging.info("FILE: "+str(file.path)+" EXIF_Nuovo Anno/Mese: "+dstyearfolder+"/"+dstmonthfolder)
+                            except BaseException as e:
+                                pass
+                                logging.error(str(e))
                         dstfile=dstroot+"\\"+dstyearfolder+"\\" +dstmonthfolder+"\\"+md5filename+dstext
                         logging.debug("File Destinazione: "+dstfile)
                         self.globpropsHash['masterrepository_bin']=self.globpropsHash['masterrepository']+"\\cestino"
@@ -271,3 +320,5 @@ if __name__ == '__main__':
     PhotoManagerApp=wx.App()
     framePrincipale = PhotoManagerAppFrame(None,"PhotoManager")
     PhotoManagerApp.MainLoop()
+
+
