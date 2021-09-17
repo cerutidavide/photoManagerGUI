@@ -13,6 +13,9 @@ from PIL.ExifTags import TAGS
 from PIL import UnidentifiedImageError
 from PIL.TiffTags import TAGS
 from PIL.TiffTags import TYPES
+from PIL import TiffTags
+from PIL import Image
+from PIL.TiffTags import TAGS
 
 # TODO platform indipendence ma prima porting su windows
 # TODO scremare immagini e altri tipi di file eventualmente spostando i file uso il comando file?
@@ -92,9 +95,8 @@ class PhotoManagerAppFrame(wx.Frame):
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
-        # self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
-        self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",
-                                                    ".masterrepository.conf")
+        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
+        #self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
         logging.debug(str(self.globpropsHash))
         self.importDirFileExtensions = {}
         self.importfileHash = {}
@@ -264,20 +266,6 @@ class PhotoManagerAppFrame(wx.Frame):
                             with Image.open(pathlib.Path(file)) as image:
                                 try:
                                     exifData = {}
-                                    #306 è la chiave di DateTime nei file simil TIF
-                                    info2 = image.tag[306]
-                                    if info2:
-                                        logging.debug("DateTime tipo TIF non è nullo")
-                                        logging.info("FILE: " + str(file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
-                                        #logging.debug('TIF DateTime: ' + time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
-                                        logging.debug('TIF Presente Anno_PRE:' + dstyearfolder)
-                                        logging.debug('TIF Presente Mese_PRE:' + dstmonthfolder)
-                                        dstyearfolder = time.strftime("%Y",time.strptime(info2, "%Y:%m:%d %H:%M:%S"))
-                                        dstmonthfolder = time.strftime("%m", time.strptime(info2,"%Y:%m:%d %H:%M:%S"))
-                                        logging.debug('TIF Presente Anno_POST:' + dstyearfolder)
-                                        logging.debug('TIF Presente Mese_POST:' + dstmonthfolder)
-                                        logging.info("FILE: " + str(
-                                         file.path) + " TIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
                                     info = image.getexif()
                                     if info:
                                         logging.debug("info EXIF non è nullo")
@@ -301,8 +289,22 @@ class PhotoManagerAppFrame(wx.Frame):
                                                 logging.debug('EXIF Presente Mese_POST:' + dstmonthfolder)
                                                 logging.info("FILE: " + str(
                                                     file.path) + " EXIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
+                                    tiffDateTime=image.tag[306]
+                                    logging.debug("DateTime tipo TIF non è nullo")
+                                    logging.info("FILE: " + str(file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
+                                    logging.debug('TIF DateTime: ' + time.asctime(time.strptime(tiffDateTime, "%Y:%m:%d %H:%M:%S")))
+                                    logging.debug('TIF Presente Anno_PRE:' + dstyearfolder)
+                                    logging.debug('TIF Presente Mese_PRE:' + dstmonthfolder)
+                                    dstyearfolder = time.strftime("%Y",time.strptime(tiffDateTime, "%Y:%m:%d %H:%M:%S"))
+                                    dstmonthfolder = time.strftime("%m", time.strptime(tiffDateTime,"%Y:%m:%d %H:%M:%S"))
+                                    logging.debug('TIF Presente Anno_POST:' + dstyearfolder)
+                                    logging.debug('TIF Presente Mese_POST:' + dstmonthfolder)
+                                    logging.info("FILE: " + str(
+                                        file.path) + " TIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
+
                                 except BaseException as e:
                                     pass
+                                    logging.error("ERRORONE")
                                     logging.error(str(e))
                         except UnidentifiedImageError:
                             logging.error("Il file non è un immagine")
