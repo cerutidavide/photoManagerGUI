@@ -10,7 +10,7 @@ from PIL import Image
 import pathlib
 from PIL import ExifTags
 from PIL.ExifTags import TAGS
-
+from PIL import UnidentifiedImageError
 
 #TODO platform indipendence ma prima porting su windows
 #TODO scremare immagini e altri tipi di file eventualmente spostando i file uso il comando file?
@@ -23,7 +23,6 @@ from PIL.ExifTags import TAGS
 #TODO attenzione a mettere le virgolette a inizio e fine nome file!!!!!
 #TODO ancora più importante controllare modalità apertura file (append vs truncate vs readonly)
 #TODO mettere il mese in numero
-#TODO radio button per dire se fai o no backup delle importate
 #TODO riorganizzare interfaccia grafica
 #TODO NB sistemare data con metadata giusti. EXIF
 
@@ -84,7 +83,7 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self,parent,title):
-        logging.root.setLevel('INFO')
+        logging.root.setLevel('DEBUG')
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size=675
         self.checkRunning=True
@@ -123,7 +122,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
         self.modoCopia = wx.RadioBox(self, label="Azione Su File Correttamente Importati:", majorDimension=3,pos=(5, 230), size=(345, -1),choices=["nessuna azione","cestino archivio", "cestino windows"])
 
-
+        self.fileCounter={'tot_files': 0, 'copied_files': 0, 'skipped_files': 0}
         self.SetFocus()
         self.loggerFS=logging.getLogger("filesystemstuff")
         self.Center()
@@ -148,28 +147,31 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(self.gauge.GetRange())
         self.messageExtension=wx.MessageBox("Nel folder import "+messaggioFolderImport+"\nci sono i seguenti tipi di file: \n"+messaggioEstensioni,'',wx.CLOSE)
         logging.info(messaggioEstensioni)
-        # for file in os.scandir(self.globpropsHash['importfolder']):
-        #     if file.is_dir():
-        #         logging.info("DIR: "+str(file.path))
-        #     else:
-        #         logging.info("FILE: "+str(file.path))
-        #         logging.info('MODIFIED Datetime: '+time.ctime(os.path.getmtime(file)))
-        #         logging.info('CREATED Datetime: '+time.ctime(os.path.getctime(file)))
-        #         with Image.open(pathlib.Path(file)) as image:
-        #             try:
-        #                 exifData = {}
-        #                 info = image.getexif()
-        #                 if info:
-        #                     for (tag, value) in info.items():
-        #                         decoded = TAGS.get(tag, tag)
-        #                         exifData[decoded] = value
-        #                         logging.debug(image.filename+' EXIF_TAG: '+str(decoded)+' '+str(value))
-        #                         if decoded=='DateTime':
-        #                             logging.info('EXIF DateTime: '+time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
-        #             except BaseException as e:
-        #                 pass
-        #                 logging.error(str(e))
+
         self.gauge.SetValue(0)
+
+    def TestExif(self,evt):
+        for file in os.scandir(self.globpropsHash['importfolder']):
+            if file.is_dir():
+                logging.info("DIR: "+str(file.path))
+            else:
+                logging.info("FILE: "+str(file.path))
+                logging.info('MODIFIED Datetime: '+time.ctime(os.path.getmtime(file)))
+                logging.info('CREATED Datetime: '+time.ctime(os.path.getctime(file)))
+                with Image.open(pathlib.Path(file)) as image:
+                    try:
+                        exifData = {}
+                        info = image.getexif()
+                        if info:
+                            for (tag, value) in info.items():
+                                decoded = TAGS.get(tag, tag)
+                                exifData[decoded] = value
+                                logging.debug(image.filename+' EXIF_TAG: '+str(decoded)+' '+str(value))
+                                if decoded=='DateTime':
+                                    logging.info('EXIF DateTime: '+time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
+                    except BaseException as e:
+                        pass
+                        logging.error(str(e))
 
     def Esci(self,evt):
         self.Close()
@@ -206,6 +208,7 @@ class PhotoManagerAppFrame(wx.Frame):
     #     f2.close()
 
     def AvviaCopiaFile(self,evt):
+        self.fileCounter={'tot_files': 0, 'copied_files': 0, 'skipped_files': 0}
         self.importDirError=0
         self.CopiaFile(self.globpropsHash['importfolder'])
         self.mstrfileHash.clear()
@@ -214,11 +217,12 @@ class PhotoManagerAppFrame(wx.Frame):
         self.skippedfileHash.clear()
         self.gauge.SetValue(self.gauge.GetRange())
         if self.importDirError==0:
-            okMD5 = wx.MessageDialog(self, "Copia File Terminata" ,style=wx.ICON_INFORMATION,caption="Copia Terminata")
+            okMD5 = wx.MessageDialog(self, "Import File Terminato\n\n"+"File copiati: "+str(self.fileCounter['copied_files'])+"\nFile saltati: "+str(self.fileCounter['skipped_files'])+"\nFile totali: "+str(self.fileCounter['tot_files']) ,style=wx.ICON_INFORMATION,caption="Copia Terminata")
             okMD5.ShowModal()
         self.gauge.SetValue(0)
 
     def CopiaFile(self,dir="C:\\Users\\c333053\\TestImport",round=0):
+
         n=round+self.gauge.GetRange()
         if os.path.exists(dir):
             for file in os.scandir(dir):
@@ -240,28 +244,33 @@ class PhotoManagerAppFrame(wx.Frame):
                         md5filename=str(p.stdout).split('\n')[1]
                         dstext=os.path.splitext(file)[1].lower()
                         logging.info("FILE: "+str(file.path))
-                        with Image.open(pathlib.Path(file)) as image:
-                            try:
-                                exifData = {}
-                                info = image.getexif()
-                                if info:
-                                    for (tag, value) in info.items():
-                                        decoded = TAGS.get(tag, tag)
-                                        exifData[decoded] = value
-                                        logging.debug(image.filename+' EXIF_TAG: '+str(decoded)+' '+str(value))
-                                        if decoded=='DateTime':
-                                            logging.info("FILE: "+str(file.path)+" FILE_Anno/Mese: "+dstyearfolder+"/"+dstmonthfolder)
-                                            logging.debug('EXIF DateTime: '+time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
-                                            logging.debug('EXIF Presente Anno_PRE:'+dstyearfolder)
-                                            logging.debug('EXIF Presente Mese_PRE:'+dstmonthfolder)
-                                            dstyearfolder=time.strftime("%Y",time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                            dstmonthfolder=time.strftime("%m",time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                            logging.debug('EXIF Presente Anno_POST:'+dstyearfolder)
-                                            logging.debug('EXIF Presente Mese_POST:'+dstmonthfolder)
-                                            logging.info("FILE: "+str(file.path)+" EXIF_Nuovo Anno/Mese: "+dstyearfolder+"/"+dstmonthfolder)
-                            except BaseException as e:
-                                pass
-                                logging.error(str(e))
+                        self.fileCounter['tot_files']=self.fileCounter['tot_files']+1
+                        try:
+                            with Image.open(pathlib.Path(file)) as image:
+                                try:
+                                    exifData = {}
+                                    info = image.getexif()
+                                    if info:
+                                        for (tag, value) in info.items():
+                                            decoded = TAGS.get(tag, tag)
+                                            exifData[decoded] = value
+                                            logging.debug(image.filename+' EXIF_TAG: '+str(decoded)+' '+str(value))
+                                            if decoded=='DateTime':
+                                                logging.info("FILE: "+str(file.path)+" FILE_Anno/Mese: "+dstyearfolder+"/"+dstmonthfolder)
+                                                logging.debug('EXIF DateTime: '+time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
+                                                logging.debug('EXIF Presente Anno_PRE:'+dstyearfolder)
+                                                logging.debug('EXIF Presente Mese_PRE:'+dstmonthfolder)
+                                                dstyearfolder=time.strftime("%Y",time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                                dstmonthfolder=time.strftime("%m",time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                                logging.debug('EXIF Presente Anno_POST:'+dstyearfolder)
+                                                logging.debug('EXIF Presente Mese_POST:'+dstmonthfolder)
+                                                logging.info("FILE: "+str(file.path)+" EXIF_Nuovo Anno/Mese: "+dstyearfolder+"/"+dstmonthfolder)
+                                except BaseException as e:
+                                    pass
+                                    logging.error(str(e))
+                        except UnidentifiedImageError:
+                            logging.error("Il file non è un immagine")
+
                         dstfile=dstroot+"\\"+dstyearfolder+"\\" +dstmonthfolder+"\\"+md5filename+dstext
                         logging.debug("File Destinazione: "+dstfile)
                         self.globpropsHash['masterrepository_bin']=self.globpropsHash['masterrepository']+"\\cestino"
@@ -277,6 +286,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             try:
                                 shutil.copy2(srcfile,dstfile,follow_symlinks=False)
                                 logging.info("<<COPIATO>>File: "+srcfile+" su "+dstfile)
+                                self.fileCounter['copied_files']=self.fileCounter['copied_files']+1
                                 if self.copymode==1:
                                     try:
                                         shutil.move(srcfile, self.globpropsHash['masterrepository_bin'], copy_function='copy2')
@@ -302,6 +312,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                 except IOError as e:
                                     logging.error("<<ERRORE CESTINO:>>File: "+srcfile+"****"+str(e))
                             logging.info("<<SKIPPED>>File: "+srcfile+" identico a "+md5filename+dstext)
+                            self.fileCounter['skipped_files']=self.fileCounter['skipped_files']+1
                     else:
                         logging.debug("Errore nel file: "+str(file.path))
                         errorMD5 = wx.MessageDialog(self, "Calcolo MD5 con errori per il file: " + str(file.path), style=wx.ICON_ERROR,caption="errore MD5")
