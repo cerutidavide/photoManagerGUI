@@ -91,12 +91,12 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title):
-        logging.root.setLevel('DEBUG')
+        logging.root.setLevel('INFO')
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
-        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
-        #self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
+        #self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
+        self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
         logging.debug(str(self.globpropsHash))
         self.importDirFileExtensions = {}
         self.importfileHash = {}
@@ -290,13 +290,14 @@ class PhotoManagerAppFrame(wx.Frame):
                                                 logging.info("FILE: " + str(
                                                     file.path) + " EXIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
                                     tiffDateTime=image.tag[306]
+                                    logging.debug(tiffDateTime[0])
                                     logging.debug("DateTime tipo TIF non è nullo")
                                     logging.info("FILE: " + str(file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
-                                    logging.debug('TIF DateTime: ' + time.asctime(time.strptime(tiffDateTime, "%Y:%m:%d %H:%M:%S")))
+                                    logging.debug('TIF DateTime: ' + time.asctime(time.strptime(tiffDateTime[0], "%Y:%m:%d %H:%M:%S")))
                                     logging.debug('TIF Presente Anno_PRE:' + dstyearfolder)
                                     logging.debug('TIF Presente Mese_PRE:' + dstmonthfolder)
-                                    dstyearfolder = time.strftime("%Y",time.strptime(tiffDateTime, "%Y:%m:%d %H:%M:%S"))
-                                    dstmonthfolder = time.strftime("%m", time.strptime(tiffDateTime,"%Y:%m:%d %H:%M:%S"))
+                                    dstyearfolder = time.strftime("%Y",time.strptime(tiffDateTime[0], "%Y:%m:%d %H:%M:%S"))
+                                    dstmonthfolder = time.strftime("%m", time.strptime(tiffDateTime[0],"%Y:%m:%d %H:%M:%S"))
                                     logging.debug('TIF Presente Anno_POST:' + dstyearfolder)
                                     logging.debug('TIF Presente Mese_POST:' + dstmonthfolder)
                                     logging.info("FILE: " + str(
@@ -321,7 +322,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         if not os.path.exists(dstroot + "\\" + dstyearfolder + "\\" + dstmonthfolder):
                             os.makedirs(dstroot + "\\" + dstyearfolder + "\\" + dstmonthfolder)
                         if not os.path.exists(dstfile):
-                            logging.debug("File: " + dstfile + "Non Esiste, lo copio")
+                            logging.debug("File: " + dstfile + " Non Esiste, lo copio")
                             try:
                                 shutil.copy2(srcfile, dstfile, follow_symlinks=False)
                                 logging.info("<<COPIATO>>File: " + srcfile + " su " + dstfile)
