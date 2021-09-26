@@ -129,7 +129,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.importDirList.SelectPath("c:\\temp", select=True)
         self.importDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaImportFolder)
 
-        self.modoCopia = wx.RadioBox(self, label="Azione Su File Correttamente Importati:", majorDimension=3,
+        self.modoCopia = wx.RadioBox(self, label="Azione Su File Importati/Saltati:", majorDimension=3,
                                      pos=(5, 230), size=(345, -1),
                                      choices=["nessuna azione", "cestino archivio", "cestino windows"])
 
@@ -191,36 +191,6 @@ class PhotoManagerAppFrame(wx.Frame):
     def Esci(self, evt):
         self.Close()
         pass
-
-    # def CostruisciImport(self,dir="tmp"):
-    #     for file in os.listdir(dir):
-    #         if os.path.isdir(dir + "/" + file):
-    #             self.CostruisciImport(dir + "/" + file)
-    #             pass
-    #         else:
-    #             # print(dir+"/"+file)
-    #             fileconpath = dir + "/" + file
-    #             match2 = re.search('^\..*', file)
-    #             if match2 is None:
-    #                 if fileconpath not in self.importfileHash.keys():
-    #                     self.gauge.SetValue((self.gauge.GetValue() + 1))
-    #                     self.gauge.Refresh()
-    #                     PhotoManagerApp.Yield()
-    #                     #p = subprocess.run('md5 ' + "\"" + dir + "/" + file + "\"", shell=True, universal_newlines=True,stdout=subprocess.PIPE)
-    #                     md5command = 'certutil -hashfile ' + dir + '\\' + file + ' MD5'
-    #                     logging.debug(md5command)
-    #                     p = subprocess.run(md5command, shell=True, universal_newlines=True,
-    #                                        stdout=subprocess.PIPE)
-    #                     PhotoManagerApp.Yield()
-    #                     #match = re.search("MD5 \((.*)\) = (.*)", str(p.stdout))
-    #                     filerow = dir + '\\' + file + '|' + str(p.stdout).split('\n')[1] + '\n'
-    #                     f2.writelines(filerow)
-    #                     logging.debug(filerow)
-    #                     f2.flush()
-    #         if self.checkRunning is False:
-    #             break
-    #     f2.close()
-
     def AvviaCopiaFile(self, evt):
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0}
         self.importDirError = 0
