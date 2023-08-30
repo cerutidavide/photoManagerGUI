@@ -169,9 +169,9 @@ class PhotoManagerAppFrame(wx.Frame):
             if file.is_dir():
                 logging.info("DIR: " + str(file.path))
             else:
-                logging.info("FILE: " + str(file.path))
-                logging.info('MODIFIED Datetime: ' + time.ctime(os.path.getmtime(file)))
-                logging.info('CREATED Datetime: ' + time.ctime(os.path.getctime(file)))
+                logging.debug("FILE: " + str(file.path))
+                logging.debug('MODIFIED Datetime: ' + time.ctime(os.path.getmtime(file)))
+                logging.debug('CREATED Datetime: ' + time.ctime(os.path.getctime(file)))
                 with Image.open(pathlib.Path(file)) as image:
                     try:
                         exifData = {}
@@ -230,7 +230,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
                         md5filename = str(p.stdout).split('\n')[1]
                         dstext = os.path.splitext(file)[1].lower()
-                        logging.info("FILE: " + str(file.path))
+                        logging.debug("FILE: " + str(file.path))
                         self.fileCounter['tot_files'] = self.fileCounter['tot_files'] + 1
                         try:
                             with Image.open(pathlib.Path(file)) as image:
@@ -245,7 +245,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                             logging.debug(
                                                 image.filename + ' EXIF_TAG: ' + str(decoded) + ' ' + str(value))
                                             if decoded == 'DateTime':
-                                                logging.info("FILE: " + str(
+                                                logging.debug("FILE: " + str(
                                                     file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
                                                 logging.debug('EXIF DateTime: ' + time.asctime(
                                                     time.strptime(value, "%Y:%m:%d %H:%M:%S")))
@@ -257,12 +257,12 @@ class PhotoManagerAppFrame(wx.Frame):
                                                                                                    "%Y:%m:%d %H:%M:%S"))
                                                 logging.debug('EXIF Presente Anno_POST:' + dstyearfolder)
                                                 logging.debug('EXIF Presente Mese_POST:' + dstmonthfolder)
-                                                logging.info("FILE: " + str(
+                                                logging.debug("FILE: " + str(
                                                     file.path) + " EXIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
                                     tiffDateTime=image.tag[306]
                                     logging.debug(tiffDateTime[0])
                                     logging.debug("DateTime tipo TIF non è nullo")
-                                    logging.info("FILE: " + str(file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
+                                    logging.debug("FILE: " + str(file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
                                     logging.debug('TIF DateTime: ' + time.asctime(time.strptime(tiffDateTime[0], "%Y:%m:%d %H:%M:%S")))
                                     logging.debug('TIF Presente Anno_PRE:' + dstyearfolder)
                                     logging.debug('TIF Presente Mese_PRE:' + dstmonthfolder)
@@ -270,7 +270,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                     dstmonthfolder = time.strftime("%m", time.strptime(tiffDateTime[0],"%Y:%m:%d %H:%M:%S"))
                                     logging.debug('TIF Presente Anno_POST:' + dstyearfolder)
                                     logging.debug('TIF Presente Mese_POST:' + dstmonthfolder)
-                                    logging.info("FILE: " + str(
+                                    logging.debug("FILE: " + str(
                                         file.path) + " TIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
 
                                 except BaseException as e:
