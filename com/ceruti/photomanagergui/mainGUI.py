@@ -17,9 +17,8 @@ from PIL import TiffTags
 from PIL import Image
 from PIL.TiffTags import TAGS
 
-# TODO platform indipendence ma prima porting su windows
-# TODO scremare immagini e altri tipi di file eventualmente spostando i file uso il comando file?
-# TODO aggiungere i log al livello giusto
+# NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore    righe 97 e 98
+
 # TODO GESTIONE ERRORI DA MIGLIORARE
 # TODO far capire cosa succede
 # TODO IMPOSTARE CORRETTAMENTE I PERMESSI
@@ -95,8 +94,8 @@ class PhotoManagerAppFrame(wx.Frame):
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
-        #self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
-        self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
+        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
+        #self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
         logging.debug(str(self.globpropsHash))
         self.importDirFileExtensions = {}
         self.importfileHash = {}
@@ -278,7 +277,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                     logging.error("ERRORONE")
                                     logging.error(str(e))
                         except UnidentifiedImageError:
-                            logging.error("Il file non è un immagine")
+                            logging.error("Immagine Non identificata")
 
                         dstfile = dstroot + "\\" + dstyearfolder + "\\" + dstmonthfolder + "\\" + md5filename + dstext
                         logging.debug("File Destinazione: " + dstfile)
