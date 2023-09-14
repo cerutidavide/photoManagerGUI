@@ -90,7 +90,7 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title):
-        logging.root.setLevel('INFO')
+        logging.root.setLevel('DEBUG')
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
