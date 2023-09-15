@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import time
 import wx
+import io, hashlib, hmac
 from send2trash import send2trash
 from PIL import Image
 import pathlib
@@ -18,17 +19,20 @@ from PIL import Image
 from PIL.TiffTags import TAGS
 
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore    righe 97 e 98
+# NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
 
-# TODO GESTIONE ERRORI DA MIGLIORARE
-# TODO far capire cosa succede
-# TODO IMPOSTARE CORRETTAMENTE I PERMESSI
-# TODO cambiare i nomi dei file con vecchionome.nuovonoveconmd5.estensione ??
+
+# TODO FORMATTAZIONE LOG
+# TODO modificare alberatura per gestire modello MACCHINA FOTOGRAFICA
+# TODO LOG SU FILE
+# TODO CONTROLLO PERMESSI
 # TODO sistemare pulsanti e barre di avanzamento
-# TODO attenzione a mettere le virgolette a inizio e fine nome file!!!!!
-# TODO ancora più importante controllare modalità apertura file (append vs truncate vs readonly)
-# TODO mettere il mese in numero
 # TODO riorganizzare interfaccia grafica
-# TODO NB sistemare data con metadata giusti. EXIF
+# TODO EXIF SISTEMAZIONE DATA ORA
+# TODO EXIF SET GPS DATA ORA
+# TODO LIBRERIA PYTHON MD5 al posto dell'esecuzione del comando esterno
+
+
 
 def loadFileExtensionList(self, filepath="/tmp/", extensionList=[], firstcall=True):
     if firstcall is True:
@@ -56,8 +60,9 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
     myHashGlob['fileconfprincipale'] = filenameGlob
-    logging.debug("fileconfprincipale: " + filenameGlob)
+    logging.debug("<<Parametro impostato #file_di_configurazione_principale# "+os.path.join(workingdir, filenameGlob))
     myHashGlob['masterrepositoryconf'] = filenameMstr
+    logging.debug("<<Parametro impostato #masterrepositoryconf# "+filenameMstr)
     with open(os.path.join(workingdir, filenameGlob), encoding="utf-8") as f:
         for line in f.readlines():
             # print(line)
@@ -65,26 +70,15 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
             # print(match)
             if match:
                 myHashGlob['masterrepository'] = match[1]
+                logging.debug("<<Parametro letto nel file #masterrepository# " + str(match[1]))
             match = re.search('^importfolder=(.*)', line)
             if match:
                 myHashGlob['importfolder'] = match[1]
-                logging.debug("Trovato folder import nel file di configurazione: " + str(match[1]))
+                logging.debug("<<Parametro letto nel file #importfolder# " + str(match[1]))
             match = re.search('^importfilelist=(.*)', line)
             if match:
                 myHashGlob['importfilelist'] = match[1]
-    logging.debug(myHashGlob)
-    # with open(myHashGlob['masterrepository']+'\\'+filenameMstr, encoding="utf-8") as f:
-    #     for line in f.readlines():
-    #         match = re.search('^masterrepositoryfilelist=(.*)', line)
-    #         if match:
-    #             myHashGlob['masterrepositoryfilelist'] = match[1]
-    #         match = re.search('^masterrepositoryisready=(.*)', line)
-    #         if match:
-    #             myHashGlob['masterrepositoryisready'] = match[1]
-    #         match = re.search('^masterrepositorysize=(.*)',line)
-    #         if match:
-    #             myHashGlob['masterrepositorysize']=match[1]
-    logging.debug("Dopo caricamento repository: " + str(myHashGlob))
+                logging.debug("<<Parametro letto nel file #importfilelist# " + str(match[1])+"\n")
     return myHashGlob
 
 
@@ -94,9 +88,15 @@ class PhotoManagerAppFrame(wx.Frame):
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
-        self.globpropsHash=CheckAndLoadProperties("C:\\Users\\c333053\\Downloads","default.props",".masterrepository.conf")
+        self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
+        #self.basePath="C:\\Users\\Davide\\PhotoManager"
+        self.baseFile="default.props"
+        logging.info("###PARAMETRO FILE BASE### "+self.basePath+"\\"+self.baseFile+"\n")
+        logging.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
+        logging.info("###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
+        self.globpropsHash=CheckAndLoadProperties(self.basePath,self.baseFile,".masterrepository.conf")
         #self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
-        logging.debug(str(self.globpropsHash))
+        logging.info("###PARAMETRI DI CONFIGURAZIONE###  \n"+str(self.globpropsHash))
         self.importDirFileExtensions = {}
         self.importfileHash = {}
         self.importMd5fileHash = {}
@@ -220,6 +220,11 @@ class PhotoManagerAppFrame(wx.Frame):
                     logging.debug("CopiaFile.FILE: " + str(file.path))
                     md5command = 'certutil -hashfile \"' + str(file.path) + '\" MD5'
                     logging.debug(md5command)
+                    #SEZIONE PROVA CALCOLO MD5 senza esecuzione comando
+                    with open(file, "rb") as fmd5:
+                        digest = hashlib.file_digest(fmd5, "md5")
+                        logging.debug(digest.hexdigest())
+                    #SEZIONE PROVA CALCOLO MD5 senza esecuzione comando
                     p = subprocess.run(md5command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
                     if p.returncode == 0:
                         srcfile = os.fsdecode(file)
@@ -229,6 +234,8 @@ class PhotoManagerAppFrame(wx.Frame):
                         dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
                         md5filename = str(p.stdout).split('\n')[1]
                         dstext = os.path.splitext(file)[1].lower()
+                        logging.debug("<md5filename> "+md5filename)
+                        logging.debug("<ext> "+dstext)
                         logging.debug("FILE: " + str(file.path))
                         self.fileCounter['tot_files'] = self.fileCounter['tot_files'] + 1
                         try:
@@ -276,6 +283,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                     pass
                                     logging.error("ERRORONE")
                                     logging.error(str(e))
+                                    logging.debug("info EXIF è nullo")
                         except UnidentifiedImageError:
                             logging.error("Immagine Non identificata")
 
