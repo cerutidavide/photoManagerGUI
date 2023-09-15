@@ -23,6 +23,8 @@ from PIL.TiffTags import TAGS
 
 
 # TODO FORMATTAZIONE LOG
+# TODO conteggio errori copia
+# TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
 # TODO modificare alberatura per gestire modello MACCHINA FOTOGRAFICA
 # TODO LOG SU FILE
 # TODO CONTROLLO PERMESSI
@@ -31,6 +33,9 @@ from PIL.TiffTags import TAGS
 # TODO EXIF SISTEMAZIONE DATA ORA
 # TODO EXIF SET GPS DATA ORA
 # TODO LIBRERIA PYTHON MD5 al posto dell'esecuzione del comando esterno
+# modello fotocamera default=FotocameraNonNota se in exif c'è, sovrascrivo
+#
+#
 
 
 
@@ -208,11 +213,11 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport", round=0):
-
         n = round + self.gauge.GetRange()
+
         if os.path.exists(dir):
             for file in os.scandir(dir):
-                logging.debug("FILE CORRENTE>>>>>" + str(file.path))
+                logging.debug("\n\nFILE CORRENTE>>>>>" + str(file.path))
                 if file.is_dir():
                     logging.debug("CopiaFile.DIR: " + str(file.path))
                     self.CopiaFile(file, n)
@@ -230,6 +235,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         srcfile = os.fsdecode(file)
                         dstroot = self.globpropsHash['masterrepository']
                         logging.debug("File Sorgente: " + srcfile)
+                        dstcamerafolder="FotocameraSconosciuta"
                         dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
                         dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
                         md5filename = str(p.stdout).split('\n')[1]
@@ -240,54 +246,34 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.fileCounter['tot_files'] = self.fileCounter['tot_files'] + 1
                         try:
                             with Image.open(pathlib.Path(file)) as image:
-                                try:
-                                    exifData = {}
-                                    info = image.getexif()
-                                    if info:
-                                        logging.debug("info EXIF non è nullo")
-                                        for (tag, value) in info.items():
-                                            decoded = TAGS.get(tag, tag)
-                                            exifData[decoded] = value
-                                            logging.debug(
-                                                image.filename + ' EXIF_TAG: ' + str(decoded) + ' ' + str(value))
-                                            if decoded == 'DateTime':
-                                                logging.debug("FILE: " + str(
-                                                    file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
-                                                logging.debug('EXIF DateTime: ' + time.asctime(
-                                                    time.strptime(value, "%Y:%m:%d %H:%M:%S")))
-                                                logging.debug('EXIF Presente Anno_PRE:' + dstyearfolder)
-                                                logging.debug('EXIF Presente Mese_PRE:' + dstmonthfolder)
-                                                dstyearfolder = time.strftime("%Y",
-                                                                              time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                                dstmonthfolder = time.strftime("%m", time.strptime(value,
-                                                                                                   "%Y:%m:%d %H:%M:%S"))
-                                                logging.debug('EXIF Presente Anno_POST:' + dstyearfolder)
-                                                logging.debug('EXIF Presente Mese_POST:' + dstmonthfolder)
-                                                logging.debug("FILE: " + str(
-                                                    file.path) + " EXIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
-                                    tiffDateTime=image.tag[306]
-                                    logging.debug(tiffDateTime[0])
-                                    logging.debug("DateTime tipo TIF non è nullo")
-                                    logging.debug("FILE: " + str(file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
-                                    logging.debug('TIF DateTime: ' + time.asctime(time.strptime(tiffDateTime[0], "%Y:%m:%d %H:%M:%S")))
-                                    logging.debug('TIF Presente Anno_PRE:' + dstyearfolder)
-                                    logging.debug('TIF Presente Mese_PRE:' + dstmonthfolder)
-                                    dstyearfolder = time.strftime("%Y",time.strptime(tiffDateTime[0], "%Y:%m:%d %H:%M:%S"))
-                                    dstmonthfolder = time.strftime("%m", time.strptime(tiffDateTime[0],"%Y:%m:%d %H:%M:%S"))
-                                    logging.debug('TIF Presente Anno_POST:' + dstyearfolder)
-                                    logging.debug('TIF Presente Mese_POST:' + dstmonthfolder)
-                                    logging.debug("FILE: " + str(
-                                        file.path) + " TIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
-
-                                except BaseException as e:
-                                    pass
-                                    logging.error("ERRORONE")
-                                    logging.error(str(e))
-                                    logging.debug("info EXIF è nullo")
+                                exifData = {}
+                                info = image.getexif()
+                                if info:
+                                    logging.debug("info EXIF non è nullo")
+                                    for (tag, value) in info.items():
+                                        decoded = TAGS.get(tag, tag)
+                                        exifData[decoded] = value
+                                        logging.debug(
+                                            image.filename + ' EXIF_TAG: ' + str(decoded) + ' ' + str(value))
+                                        if decoded == 'DateTime':
+                                            logging.debug("FILE: " + str(
+                                                file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
+                                            logging.debug('EXIF DateTime: ' + time.asctime(
+                                                time.strptime(value, "%Y:%m:%d %H:%M:%S")))
+                                            logging.debug('EXIF Presente Anno_PRE:' + dstyearfolder)
+                                            logging.debug('EXIF Presente Mese_PRE:' + dstmonthfolder)
+                                            dstyearfolder = time.strftime("%Y",
+                                                                            time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                            dstmonthfolder = time.strftime("%m", time.strptime(value,
+                                                                                                "%Y:%m:%d %H:%M:%S"))
+                                            logging.debug('EXIF Presente Anno_POST:' + dstyearfolder)
+                                            logging.debug('EXIF Presente Mese_POST:' + dstmonthfolder)
+                                            logging.debug("FILE: " + str(
+                                                file.path) + " EXIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
                         except UnidentifiedImageError:
                             logging.error("Immagine Non identificata")
-
-                        dstfile = dstroot + "\\" + dstyearfolder + "\\" + dstmonthfolder + "\\" + md5filename + dstext
+                        dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
+                        dstfile = dstfolder + "\\" + md5filename + dstext
                         logging.debug("File Destinazione: " + dstfile)
                         self.globpropsHash['masterrepository_bin'] = self.globpropsHash[
                                                                          'masterrepository'] + "\\cestino"
@@ -296,8 +282,8 @@ class PhotoManagerAppFrame(wx.Frame):
                         if not os.path.exists(self.globpropsHash['masterrepository_bin']):
                             os.makedirs(self.globpropsHash['masterrepository_bin'])
                             logging.debug("FOLDER_CESTINO_ARCHIVIO:" + self.globpropsHash['masterrepository_bin'])
-                        if not os.path.exists(dstroot + "\\" + dstyearfolder + "\\" + dstmonthfolder):
-                            os.makedirs(dstroot + "\\" + dstyearfolder + "\\" + dstmonthfolder)
+                        if not os.path.exists(dstfolder):
+                            os.makedirs(dstfolder)
                         if not os.path.exists(dstfile):
                             logging.debug("File: " + dstfile + " Non Esiste, lo copio")
                             try:
