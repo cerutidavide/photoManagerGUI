@@ -65,9 +65,9 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
     myHashGlob['fileconfprincipale'] = filenameGlob
-    logging.debug("<<Parametro impostato #file_di_configurazione_principale# "+os.path.join(workingdir, filenameGlob))
+    logger.debug("<<Parametro impostato #file_di_configurazione_principale# "+os.path.join(workingdir, filenameGlob))
     myHashGlob['masterrepositoryconf'] = filenameMstr
-    logging.debug("<<Parametro impostato #masterrepositoryconf# "+filenameMstr)
+    logger.debug("<<Parametro impostato #masterrepositoryconf# "+filenameMstr)
     with open(os.path.join(workingdir, filenameGlob), encoding="utf-8") as f:
         for line in f.readlines():
             # print(line)
@@ -75,34 +75,32 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
             # print(match)
             if match:
                 myHashGlob['masterrepository'] = match[1]
-                logging.debug("<<Parametro letto nel file #masterrepository# " + str(match[1]))
+                logger.debug("<<Parametro letto nel file #masterrepository# " + str(match[1]))
             match = re.search('^importfolder=(.*)', line)
             if match:
                 myHashGlob['importfolder'] = match[1]
-                logging.debug("<<Parametro letto nel file #importfolder# " + str(match[1]))
+                logger.debug("<<Parametro letto nel file #importfolder# " + str(match[1]))
             match = re.search('^importfilelist=(.*)', line)
             if match:
                 myHashGlob['importfilelist'] = match[1]
-                logging.debug("<<Parametro letto nel file #importfilelist# " + str(match[1])+"\n")
+                logger.debug("<<Parametro letto nel file #importfilelist# " + str(match[1])+"\n")
     return myHashGlob
 
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title):
-
-
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
-        self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
-        #self.basePath="C:\\Users\\Davide\\PhotoManager"
+        #self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
+        self.basePath="C:\\Users\\Davide\\PhotoManager"
         self.baseFile="default.props"
-        logging.info("###PARAMETRO FILE BASE### "+self.basePath+"\\"+self.baseFile+"\n")
-        logging.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
-        logging.info("###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
+        logger.info("###PARAMETRO FILE BASE### "+self.basePath+"\\"+self.baseFile+"\n")
+        logger.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
+        logger.info("###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
         self.globpropsHash=CheckAndLoadProperties(self.basePath,self.baseFile,".masterrepository.conf")
         #self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
-        logging.info("###PARAMETRI DI CONFIGURAZIONE###  \n"+str(self.globpropsHash))
+        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n"+str(self.globpropsHash))
         self.importDirFileExtensions = {}
         self.importfileHash = {}
         self.importMd5fileHash = {}
@@ -158,25 +156,25 @@ class PhotoManagerAppFrame(wx.Frame):
     def AvviaCaricaEstensioni(self, evt):
         logger.debug("**********   " + self.globpropsHash['importfolder'])
         self.SelezionaImportFolder(evt)
-        logging.debug("**********   " + self.globpropsHash['importfolder'])
+        logger.debug("**********   " + self.globpropsHash['importfolder'])
         messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['importfolder'], True))
         messaggioFolderImport = self.globpropsHash['importfolder']
         self.gauge.SetValue(self.gauge.GetRange())
         self.messageExtension = wx.MessageBox(
             "Nel folder import " + messaggioFolderImport + "\nci sono i seguenti tipi di file: \n" + messaggioEstensioni,
             '', wx.CLOSE)
-        logging.info(messaggioEstensioni)
+        logger.info(messaggioEstensioni)
 
         self.gauge.SetValue(0)
 
     def TestExif(self, evt):
         for file in os.scandir(self.globpropsHash['importfolder']):
             if file.is_dir():
-                logging.info("DIR: " + str(file.path))
+                logger.info("DIR: " + str(file.path))
             else:
-                logging.debug("FILE: " + str(file.path))
-                logging.debug('MODIFIED Datetime: ' + time.ctime(os.path.getmtime(file)))
-                logging.debug('CREATED Datetime: ' + time.ctime(os.path.getctime(file)))
+                logger.debug("FILE: " + str(file.path))
+                logger.debug('MODIFIED Datetime: ' + time.ctime(os.path.getmtime(file)))
+                logger.debug('CREATED Datetime: ' + time.ctime(os.path.getctime(file)))
                 with Image.open(pathlib.Path(file)) as image:
                     try:
                         exifData = {}
@@ -185,9 +183,9 @@ class PhotoManagerAppFrame(wx.Frame):
                             for (tag, value) in info.items():
                                 decoded = TAGS.get(tag, tag)
                                 exifData[decoded] = value
-                                logging.debug(image.filename + ' EXIF_TAG: ' + str(decoded) + ' ' + str(value))
+                                logger.debug(image.filename + ' EXIF_TAG: ' + str(decoded) + ' ' + str(value))
                                 if decoded == 'DateTime':
-                                    logging.info(
+                                    logger.info(
                                         'EXIF DateTime: ' + time.asctime(time.strptime(value, "%Y:%m:%d %H:%M:%S")))
                     except BaseException as e:
                         pass
@@ -217,24 +215,24 @@ class PhotoManagerAppFrame(wx.Frame):
         n = round + self.gauge.GetRange()
         if os.path.exists(dir):
             for file in os.scandir(dir):
-                logging.debug("\n\nFILE CORRENTE>>>>>" + str(file.path))
+                logger.debug("\n\nFILE CORRENTE>>>>>" + str(file.path))
                 if file.is_dir():
-                    logging.debug("CopiaFile.DIR: " + str(file.path))
+                    logger.debug("CopiaFile.DIR: " + str(file.path))
                     self.CopiaFile(file, n)
                 else:
-                    logging.debug("CopiaFile.FILE: " + str(file.path))
+                    logger.debug("CopiaFile.FILE: " + str(file.path))
                     md5command = 'certutil -hashfile \"' + str(file.path) + '\" MD5'
-                    logging.debug(md5command)
+                    logger.debug(md5command)
                     #SEZIONE PROVA CALCOLO MD5 senza esecuzione comando
                     with open(file, "rb") as fmd5:
                         digest = hashlib.file_digest(fmd5, "md5")
-                        logging.debug(digest.hexdigest())
+                        logger.debug(digest.hexdigest())
                     #SEZIONE PROVA CALCOLO MD5 senza esecuzione comando
                     p = subprocess.run(md5command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
                     if p.returncode == 0:
                         srcfile = os.fsdecode(file)
                         dstroot = self.globpropsHash['masterrepository']
-                        logging.debug("File Sorgente: " + srcfile)
+                        logger.debug("File Sorgente: " + srcfile)
                         dstcamerafolder="ProduttoreNonNoto\\ModelloNonNoto"
                         dstmaker='ProduttoreNonNoto'
                         dstmodel='ModelloNonNoto'
@@ -242,67 +240,67 @@ class PhotoManagerAppFrame(wx.Frame):
                         dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
                         md5filename = str(p.stdout).split('\n')[1]
                         dstext = os.path.splitext(file)[1].lower()
-                        logging.debug("<md5filename> "+md5filename)
-                        logging.debug("<ext> "+dstext)
-                        logging.debug("FILE: " + str(file.path))
+                        logger.debug("<md5filename> "+md5filename)
+                        logger.debug("<ext> "+dstext)
+                        logger.debug("FILE: " + str(file.path))
                         self.fileCounter['tot_files'] = self.fileCounter['tot_files'] + 1
                         try:
                             with Image.open(pathlib.Path(file)) as image:
                                 info = image.getexif()
                                 if info:
-                                    logging.debug("info EXIF non è nullo")
+                                    logger.debug("info EXIF non è nullo")
 
                                     for chiave in info.keys() :
-                                        logging.debug("CHIAVE: "+str(chiave) + " CHIAVE_DECODED "+ str(TAGS.get(chiave,chiave)) + " VALORE: "+str(info[chiave]))
+                                        logger.debug("CHIAVE: "+str(chiave) + " CHIAVE_DECODED "+ str(TAGS.get(chiave,chiave)) + " VALORE: "+str(info[chiave]))
 
                                     for (tag, value) in info.items():
                                         decoded = TAGS.get(tag, tag)
-                                        logging.debug(
+                                        logger.debug(
                                             image.filename + ' EXIF_TAG: ' + str(decoded) + ' ' + str(value))
                                         if decoded == 'DateTime':
-                                            logging.debug("FILE: " + str(
+                                            logger.debug("FILE: " + str(
                                                 file.path) + " FILE_Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
-                                            logging.debug('EXIF DateTime: ' + time.asctime(
+                                            logger.debug('EXIF DateTime: ' + time.asctime(
                                                 time.strptime(value, "%Y:%m:%d %H:%M:%S")))
-                                            logging.debug('EXIF Presente Anno_PRE:' + dstyearfolder)
-                                            logging.debug('EXIF Presente Mese_PRE:' + dstmonthfolder)
+                                            logger.debug('EXIF Presente Anno_PRE:' + dstyearfolder)
+                                            logger.debug('EXIF Presente Mese_PRE:' + dstmonthfolder)
                                             dstyearfolder = time.strftime("%Y",
                                                                             time.strptime(value, "%Y:%m:%d %H:%M:%S"))
                                             dstmonthfolder = time.strftime("%m", time.strptime(value,
                                                                                                 "%Y:%m:%d %H:%M:%S"))
-                                            logging.debug('EXIF Presente Anno_POST:' + dstyearfolder)
-                                            logging.debug('EXIF Presente Mese_POST:' + dstmonthfolder)
-                                            logging.debug("FILE: " + str(
+                                            logger.debug('EXIF Presente Anno_POST:' + dstyearfolder)
+                                            logger.debug('EXIF Presente Mese_POST:' + dstmonthfolder)
+                                            logger.debug("FILE: " + str(
                                                 file.path) + " EXIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
                                         if decoded == 'Make' and value!='':
                                             dstmaker=value.strip().replace(' ','')
                                             dstcamerafolder=dstmaker
-                                            logging.debug("PRODUTTORE: "+dstmaker)
+                                            logger.debug("PRODUTTORE: "+dstmaker)
                                         if decoded == 'Model' and value!='':
                                             dstmodel=value.strip().replace(' ','-')
-                                            logging.debug("MODELLO: "+dstmodel)
+                                            logger.debug("MODELLO: "+dstmodel)
                                     dstcamerafolder=dstmaker+"\\"+dstmodel
-                                    logging.debug("FOTOCAMERA: "+dstcamerafolder)
+                                    logger.debug("FOTOCAMERA: "+dstcamerafolder)
 
                         except UnidentifiedImageError:
                             logging.error("Immagine Non identificata")
                         dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
                         dstfile = dstfolder + "\\" + md5filename + dstext
-                        logging.debug("File Destinazione: " + dstfile)
+                        logger.debug("File Destinazione: " + dstfile)
                         self.globpropsHash['masterrepository_bin'] = self.globpropsHash[
                                                                          'masterrepository'] + "\\cestino"
                         self.copymode = self.modoCopia.GetSelection()
-                        logging.debug("SELEZIONE BOTTONE: " + str(self.copymode))
+                        logger.debug("SELEZIONE BOTTONE: " + str(self.copymode))
                         if not os.path.exists(self.globpropsHash['masterrepository_bin']):
                             os.makedirs(self.globpropsHash['masterrepository_bin'])
-                            logging.debug("FOLDER_CESTINO_ARCHIVIO:" + self.globpropsHash['masterrepository_bin'])
+                            logger.debug("FOLDER_CESTINO_ARCHIVIO:" + self.globpropsHash['masterrepository_bin'])
                         if not os.path.exists(dstfolder):
                             os.makedirs(dstfolder)
                         if not os.path.exists(dstfile):
-                            logging.debug("File: " + dstfile + " Non Esiste, lo copio")
+                            logger.debug("File: " + dstfile + " Non Esiste, lo copio")
                             try:
                                 shutil.copy2(srcfile, dstfile, follow_symlinks=False)
-                                logging.info("<<COPIATO>>File: " + srcfile + " su " + dstfile)
+                                logger.info("<<COPIATO>>File: " + srcfile + " su " + dstfile)
                                 self.fileCounter['copied_files'] = self.fileCounter['copied_files'] + 1
                                 if self.copymode == 1:
                                     try:
@@ -330,10 +328,10 @@ class PhotoManagerAppFrame(wx.Frame):
                                     send2trash(srcfile)
                                 except IOError as e:
                                     logging.error("<<ERRORE CESTINO:>>File: " + srcfile + "****" + str(e))
-                            logging.info("<<SKIPPED>>File: " + srcfile + " identico a " + md5filename + dstext)
+                            logger.info("<<SKIPPED>>File: " + srcfile + " identico a " + md5filename + dstext)
                             self.fileCounter['skipped_files'] = self.fileCounter['skipped_files'] + 1
                     else:
-                        logging.debug("Errore nel file: " + str(file.path))
+                        logger.debug("Errore nel file: " + str(file.path))
                         errorMD5 = wx.MessageDialog(self, "Calcolo MD5 con errori per il file: " + str(file.path),
                                                     style=wx.ICON_ERROR, caption="errore MD5")
                         errorMD5.ShowModal()
@@ -350,30 +348,27 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
 if __name__ == '__main__':
-    logging.root.setLevel("INFO")
     # create logger
     logger = logging.getLogger('photoark')
+    logger.handlers.clear()
     logger.setLevel(logging.DEBUG)
-
     # create console handler and set level to debug
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
+    #ch.setLevel(logging.DEBUG)
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(msg)s)')
     # add formatter to ch
     ch.setFormatter(formatter)
-
     # add ch to logger
     logger.addHandler(ch)
 
+
     # 'application' code
-    logger.debug('debug message')
-    logger.info('info message')
-    logger.warning('warn message')
-    logger.error('error message')
-    logger.critical('critical message')
+    # logger.debug('debug message')
+    # logger.info('info message')
+    # logger.warning('warn message')
+    # logger.error('error message')
+    # logger.critical('critical message')
     PhotoManagerApp = wx.App()
     framePrincipale = PhotoManagerAppFrame(None, "PhotoManager")
     PhotoManagerApp.MainLoop()
