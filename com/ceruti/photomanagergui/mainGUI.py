@@ -52,7 +52,7 @@ def loadFileExtensionList(self, filepath="/tmp/", extensionList=[], firstcall=Tr
                 if ext[1] != "":
                     if ext[1] not in extensionList:
                         extensionList.append(ext[1])
-                        logging.debug("Aggiunta " + ext[1] + " alla lista delle estensioni")
+                        logger.debug("Aggiunta " + ext[1] + " alla lista delle estensioni")
                         self.gauge.SetValue(self.gauge.GetValue() + 1)
                         if self.gauge.GetValue() >= self.gauge.GetRange():
                             self.gauge.SetValue(0)
@@ -89,7 +89,8 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title):
-        logging.root.setLevel('DEBUG')
+
+
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
@@ -155,9 +156,9 @@ class PhotoManagerAppFrame(wx.Frame):
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
 
     def AvviaCaricaEstensioni(self, evt):
-        print("**********   " + self.globpropsHash['importfolder'])
+        logger.debug("**********   " + self.globpropsHash['importfolder'])
         self.SelezionaImportFolder(evt)
-        print("**********   " + self.globpropsHash['importfolder'])
+        logging.debug("**********   " + self.globpropsHash['importfolder'])
         messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['importfolder'], True))
         messaggioFolderImport = self.globpropsHash['importfolder']
         self.gauge.SetValue(self.gauge.GetRange())
@@ -214,7 +215,6 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport", round=0):
         n = round + self.gauge.GetRange()
-
         if os.path.exists(dir):
             for file in os.scandir(dir):
                 logging.debug("\n\nFILE CORRENTE>>>>>" + str(file.path))
@@ -235,7 +235,9 @@ class PhotoManagerAppFrame(wx.Frame):
                         srcfile = os.fsdecode(file)
                         dstroot = self.globpropsHash['masterrepository']
                         logging.debug("File Sorgente: " + srcfile)
-                        dstcamerafolder="FotocameraSconosciuta"
+                        dstcamerafolder="ProduttoreNonNoto\\ModelloNonNoto"
+                        dstmaker='ProduttoreNonNoto'
+                        dstmodel='ModelloNonNoto'
                         dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
                         dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
                         md5filename = str(p.stdout).split('\n')[1]
@@ -246,13 +248,15 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.fileCounter['tot_files'] = self.fileCounter['tot_files'] + 1
                         try:
                             with Image.open(pathlib.Path(file)) as image:
-                                exifData = {}
                                 info = image.getexif()
                                 if info:
                                     logging.debug("info EXIF non è nullo")
+
+                                    for chiave in info.keys() :
+                                        logging.debug("CHIAVE: "+str(chiave) + " CHIAVE_DECODED "+ str(TAGS.get(chiave,chiave)) + " VALORE: "+str(info[chiave]))
+
                                     for (tag, value) in info.items():
                                         decoded = TAGS.get(tag, tag)
-                                        exifData[decoded] = value
                                         logging.debug(
                                             image.filename + ' EXIF_TAG: ' + str(decoded) + ' ' + str(value))
                                         if decoded == 'DateTime':
@@ -270,6 +274,16 @@ class PhotoManagerAppFrame(wx.Frame):
                                             logging.debug('EXIF Presente Mese_POST:' + dstmonthfolder)
                                             logging.debug("FILE: " + str(
                                                 file.path) + " EXIF_Nuovo Anno/Mese: " + dstyearfolder + "/" + dstmonthfolder)
+                                        if decoded == 'Make' and value!='':
+                                            dstmaker=value.strip().replace(' ','')
+                                            dstcamerafolder=dstmaker
+                                            logging.debug("PRODUTTORE: "+dstmaker)
+                                        if decoded == 'Model' and value!='':
+                                            dstmodel=value.strip().replace(' ','-')
+                                            logging.debug("MODELLO: "+dstmodel)
+                                    dstcamerafolder=dstmaker+"\\"+dstmodel
+                                    logging.debug("FOTOCAMERA: "+dstcamerafolder)
+
                         except UnidentifiedImageError:
                             logging.error("Immagine Non identificata")
                         dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
@@ -336,6 +350,30 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
 if __name__ == '__main__':
+    logging.root.setLevel("INFO")
+    # create logger
+    logger = logging.getLogger('photoark')
+    logger.setLevel(logging.DEBUG)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+
+    # 'application' code
+    logger.debug('debug message')
+    logger.info('info message')
+    logger.warning('warn message')
+    logger.error('error message')
+    logger.critical('critical message')
     PhotoManagerApp = wx.App()
     framePrincipale = PhotoManagerAppFrame(None, "PhotoManager")
     PhotoManagerApp.MainLoop()
