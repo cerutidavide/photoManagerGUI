@@ -12,9 +12,10 @@ from PIL.ExifTags import TAGS
 from PIL.TiffTags import TAGS
 from send2trash import send2trash
 
-# NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore    righe 97 e 98
+# NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
 # NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
 
+# TODO CONFIGURAZIONE GITHUB
 # TODO FORMATTAZIONE LOG
 # TODO conteggio errori copia
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
@@ -25,6 +26,9 @@ from send2trash import send2trash
 # TODO EXIF SISTEMAZIONE DATA ORA
 # TODO EXIF SET GPS DATA ORA
 # TODO LIBRERIA PYTHON MD5 al posto dell'esecuzione del comando esterno
+# TODO check VERO DUPLICATI (con un dict, direttamente sull'archivio e fare anche statistiche sull'archivio)
+# TODO valutare database per statistiche
+
 
 def loadFileExtensionList(self, filepath="/tmp/", extensionList=[], firstcall=True):
     if firstcall is True:
@@ -80,8 +84,8 @@ class PhotoManagerAppFrame(wx.Frame):
         wx.Panel.__init__(self, parent, title=title, size=(700, 600))
         max_gauge_size = 675
         self.checkRunning = True
-        # self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
-        self.basePath = "C:\\Users\\Davide\\PhotoManager"
+        self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
+        #self.basePath = "C:\\Users\\Davide\\PhotoManager"
         self.baseFile = "default.props"
         logger.info("###PARAMETRO FILE BASE### " + self.basePath + "\\" + self.baseFile + "\n")
         logger.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
@@ -91,10 +95,9 @@ class PhotoManagerAppFrame(wx.Frame):
         # self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
         self.importDirFileExtensions = {}
-        self.importfileHash = {}
+
         self.importMd5fileHash = {}
         self.mstrfileHash = {}
-        self.copyfileHash = {}
         self.skippedfileHash = {}
         self.loggingDict = {}
         self.importDirError = 0
@@ -113,6 +116,9 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
         self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(5, 325))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
+        self.avviaCheckArchivio = wx.Button(self, label="Avvia Check Archivio Master", pos=(5, 350))
+        self.avviaCheckArchivio.Bind(wx.EVT_BUTTON, self.AvviaCheckArchivio)
+
         self.esci = wx.Button(self, label="ESCI", pos=(5, 450), size=(350, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
@@ -165,8 +171,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.importDirError = 0
         self.CopiaFile(self.globpropsHash['importfolder'])
         self.mstrfileHash.clear()
-        self.importfileHash.clear()
-        self.copyfileHash.clear()
+
         self.skippedfileHash.clear()
         self.gauge.SetValue(self.gauge.GetRange())
         if self.importDirError == 0:
@@ -176,6 +181,37 @@ class PhotoManagerAppFrame(wx.Frame):
                                      style=wx.ICON_INFORMATION, caption="Copia Terminata")
             okMD5.ShowModal()
         self.gauge.SetValue(0)
+
+    def AvviaCheckArchivio(self, evt):
+        self.importDirError = 0
+        self.CheckArchivio(self.globpropsHash['importfolder'])
+        self.mstrfileHash.clear()
+        self.skippedfileHash.clear()
+        self.gauge.SetValue(self.gauge.GetRange())
+        if self.importDirError == 0:
+            okMD5 = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\n", style=wx.ICON_INFORMATION, caption="Copia Terminata")
+            okMD5.ShowModal()
+        self.gauge.SetValue(0)
+
+    def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport", round=0):
+        id_log_counter_dir = self.fileCounter['tot_files']
+        if os.path.exists(dir):
+            logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<INIZIO CARTELLA>>>")
+            for file in os.scandir(dir):
+                id_log_counter = self.fileCounter['tot_files']
+                if file.is_dir():
+                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è una directory> " + str(file.path))
+                else:
+                    logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter) + " <INIZIO> " + str(file.path))
+                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO APRO")
+                    with open(file, "rb") as fmd5:
+                        md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
+                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <md5 calcolato> " + md5filename)
+                        fmd5.close()
+                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO CHIUDO")
+                    logger.debug("FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter) + " <md5> "+ md5filename + str(file.path))
+                    logger.info("FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter) + " <FINE> " + str(file.path))
+            logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport", round=0):
         id_log_counter_dir = self.fileCounter['tot_files']
@@ -295,9 +331,11 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
 if __name__ == '__main__':
+
     logger = logging.getLogger('photoark')
     logger.handlers.clear()
-    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(msg)s')
     ch.setFormatter(formatter)
