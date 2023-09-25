@@ -15,7 +15,7 @@ from send2trash import send2trash
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
 # NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
 
-# TODO CONFIGURAZIONE GITHUB
+
 # TODO FORMATTAZIONE LOG
 # TODO conteggio errori copia
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
@@ -183,24 +183,25 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
 
     def AvviaCheckArchivio(self, evt):
-        self.importDirError = 0
+        self.Errors = 0
         self.CheckArchivio(self.globpropsHash['importfolder'])
         self.mstrfileHash.clear()
-        self.skippedfileHash.clear()
         self.gauge.SetValue(self.gauge.GetRange())
-        if self.importDirError == 0:
-            okMD5 = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\n", style=wx.ICON_INFORMATION, caption="Copia Terminata")
-            okMD5.ShowModal()
+        if self.Errors == 0:
+            okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\n", style=wx.ICON_INFORMATION, caption="Check Terminato")
+            okCheck.ShowModal()
         self.gauge.SetValue(0)
 
     def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport", round=0):
         id_log_counter_dir = self.fileCounter['tot_files']
+        n = round + self.gauge.GetRange()
         if os.path.exists(dir):
             logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<INIZIO CARTELLA>>>")
             for file in os.scandir(dir):
                 id_log_counter = self.fileCounter['tot_files']
-                if file.is_dir():
-                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è una directory> " + str(file.path))
+                if file.is_dir():                    
+                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è una directory> " + str(file.path))                    
+                    self.CheckArchivio(file, n)
                 else:
                     logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter) + " <INIZIO> " + str(file.path))
                     logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO APRO")
@@ -211,6 +212,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO CHIUDO")
                     logger.debug("FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter) + " <md5> "+ md5filename + str(file.path))
                     logger.info("FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter) + " <FINE> " + str(file.path))
+                n+=1
             logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport", round=0):
@@ -337,7 +339,7 @@ if __name__ == '__main__':
     logger.propagate = False
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(msg)s')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(msg)s')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     PhotoManagerApp = wx.App()
