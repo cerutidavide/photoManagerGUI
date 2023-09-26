@@ -17,6 +17,7 @@ from send2trash import send2trash
 
 
 # TODO FORMATTAZIONE LOG
+# TODO correzione conteggio cartelle in copia file
 # TODO conteggio errori copia
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
 # TODO LOG SU FILE
@@ -131,7 +132,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                      pos=(5, 230), size=(345, -1),
                                      choices=["nessuna azione", "cestino archivio", "cestino windows"])
 
-        self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0}
+        self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0}
         self.SetFocus()
         self.Center()
         self.Show(True)
@@ -183,37 +184,39 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
 
     def AvviaCheckArchivio(self, evt):
+        self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0 ,'tot_dirs': 0}
         self.Errors = 0
-        self.CheckArchivio(self.globpropsHash['importfolder'])
+        self.CheckArchivio(self.globpropsHash['importfolder'])        
         self.mstrfileHash.clear()
         self.gauge.SetValue(self.gauge.GetRange())
         if self.Errors == 0:
-            okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\n", style=wx.ICON_INFORMATION, caption="Check Terminato")
+            okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
         self.gauge.SetValue(0)
 
     def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport", round=0):
-        id_log_counter_dir = self.fileCounter['tot_files']
+        id_log_counter_dir = str(self.fileCounter['tot_dirs'])
         n = round + self.gauge.GetRange()
         if os.path.exists(dir):
-            logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<INIZIO CARTELLA>>>")
+            logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",str(dir),id_log_counter_dir)
             for file in os.scandir(dir):
-                id_log_counter = self.fileCounter['tot_files']
+                id_log_counter = str(self.fileCounter['tot_files'])
                 if file.is_dir():                    
-                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è una directory> " + str(file.path))                    
+                    logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                    
                     self.CheckArchivio(file, n)
                 else:
-                    logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter) + " <INIZIO> " + str(file.path))
-                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO APRO")
+                    logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, str(file.path))
+                    logger.debug("FILE %s_%s  <è un file...> %s LO APRO",id_log_counter_dir,id_log_counter, str(file.path))
                     with open(file, "rb") as fmd5:
                         md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
-                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <md5 calcolato> " + md5filename)
+                        logger.debug("FILE %s_%s <md5 calcolato> " + md5filename)
                         fmd5.close()
-                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO CHIUDO")
-                    logger.debug("FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter) + " <md5> "+ md5filename + str(file.path))
-                    logger.info("FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter) + " <FINE> " + str(file.path))
+                        logger.debug("FILE %s_%s <è un file...> %s LO CHIUDO",id_log_counter_dir,id_log_counter, str(file.path))
+                    logger.debug("FILE %s_%s <md5> %s %s",id_log_counter_dir,id_log_counter, md5filename,str(file.path))
+                    logger.info("FILE %s_%s <FINE> %s",id_log_counter_dir,id_log_counter, str(file.path))
+                    self.fileCounter['tot_files']+=1
                 n+=1
-            logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
+            logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport", round=0):
         id_log_counter_dir = self.fileCounter['tot_files']
@@ -333,15 +336,37 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
 if __name__ == '__main__':
-
+    
     logger = logging.getLogger('photoark')
-    logger.handlers.clear()
+    
+    #logger.propagate = False
+    #logger.setLevel(logging.DEBUG)
+    #ch = logging.StreamHandler()
+    #formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(msg)s')
+    #ch.setFormatter(formatter)
+    #logger.addHandler(ch)
+
+    
+    
+    #logger = logging.getLogger('photoark')
+    
+    stdout = logging.StreamHandler()
+    
+    #fmt = logging.Formatter("%(name)s: %(asctime)s | %(levelname)s | %(filename)s%(lineno)s | %(process)d >>> %(message)s")
+    fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+    stdout.setFormatter(fmt)
+    logger.addHandler(stdout)
+
+    logger.setLevel(logging.INFO)
     logger.propagate = False
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(msg)s')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+    
+
+
+
+
+
+    
     PhotoManagerApp = wx.App()
     framePrincipale = PhotoManagerAppFrame(None, "PhotoManager")
     PhotoManagerApp.MainLoop()
