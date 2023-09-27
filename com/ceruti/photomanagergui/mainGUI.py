@@ -18,7 +18,7 @@ from send2trash import send2trash
 
 
 # TODO FORMATTAZIONE LOG
-# TODO correzione conteggio cartelle in copia file
+# TODO conteggio file e cartelle in check duplicati archivio
 # TODO conteggio errori copia
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
 # TODO LOG SU FILE
