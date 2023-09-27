@@ -98,7 +98,8 @@ class PhotoManagerAppFrame(wx.Frame):
         self.importDirFileExtensions = {}
 
         self.importMd5fileHash = {}
-        self.mstrfileHash = {}
+        self.duplicatedFilesDict = {}
+        self.duplicatedFilesListValues=[]
         self.skippedfileHash = {}
         self.loggingDict = {}
         self.importDirError = 0
@@ -171,7 +172,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0}
         self.importDirError = 0
         self.CopiaFile(self.globpropsHash['importfolder'])
-        self.mstrfileHash.clear()
+        self.duplicatedFilesDict.clear()
 
         self.skippedfileHash.clear()
         self.gauge.SetValue(self.gauge.GetRange())
@@ -185,35 +186,48 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaCheckArchivio(self, evt):
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0 ,'tot_dirs': 0}
+        self.duplicatedFilesDict.clear()
         self.Errors = 0
-        self.CheckArchivio(self.globpropsHash['importfolder'])        
-        self.mstrfileHash.clear()
+        self.CheckArchivio(self.globpropsHash['importfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
+        logger.info("Dictionary File Trovati: ")
+        for k in self.duplicatedFilesDict.keys():
+            logger.info("chiave >>> %s  valore >>> %s",k,self.duplicatedFilesDict[k])
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
+            #Inserire qui il widget giusto per i file
+
+
         self.gauge.SetValue(0)
 
     def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport", round=0):
         id_log_counter_dir = str(self.fileCounter['tot_dirs'])
         n = round + self.gauge.GetRange()
         if os.path.exists(dir):
-            logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",str(dir),id_log_counter_dir)
+            logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
             for file in os.scandir(dir):
                 id_log_counter = str(self.fileCounter['tot_files'])
                 if file.is_dir():                    
                     logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                    
                     self.CheckArchivio(file, n)
                 else:
-                    logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, str(file.path))
-                    logger.debug("FILE %s_%s  <è un file...> %s LO APRO",id_log_counter_dir,id_log_counter, str(file.path))
+                    logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
+                    logger.debug("FILE %s_%s  <APERTURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     with open(file, "rb") as fmd5:
                         md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
-                        logger.debug("FILE %s_%s <md5 calcolato> " + md5filename)
+                        logger.debug("FILE %s_%s <md5 calcolato> %s",id_log_counter_dir,id_log_counter,md5filename)
+                        if md5filename not in self.duplicatedFilesDict:
+                            self.duplicatedFilesDict[md5filename]=[file.path]                            
+                            logger.debug("FILE %s_%s <INSERIMENTO NUOVO> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.duplicatedFilesDict[md5filename]))
+                        else:
+                            listvalue=self.duplicatedFilesDict[md5filename]
+                            listvalue.append(file.path)
+                            logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO>: %s , Nuovo valore lista file per chiave: %s',id_log_counter_dir,id_log_counter,file.path,listvalue)
+                            self.duplicatedFilesDict[md5filename]=listvalue
+                            logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.duplicatedFilesDict[md5filename])                                                    
                         fmd5.close()
-                        logger.debug("FILE %s_%s <è un file...> %s LO CHIUDO",id_log_counter_dir,id_log_counter, str(file.path))
-                    logger.debug("FILE %s_%s <md5> %s %s",id_log_counter_dir,id_log_counter, md5filename,str(file.path))
-                    logger.info("FILE %s_%s <FINE> %s",id_log_counter_dir,id_log_counter, str(file.path))
+                        logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     self.fileCounter['tot_files']+=1
                 n+=1
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
@@ -358,7 +372,7 @@ if __name__ == '__main__':
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
 
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False
     
 
