@@ -6,6 +6,7 @@ import re
 import shutil
 import time
 import wx
+import wx.dataview
 from PIL import Image
 from PIL import UnidentifiedImageError
 from PIL.ExifTags import TAGS
@@ -133,7 +134,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                      pos=(5, 230), size=(345, -1),
                                      choices=["nessuna azione", "cestino archivio", "cestino windows"])
 
-        self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0}
+        self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
         self.SetFocus()
         self.Center()
         self.Show(True)
@@ -185,7 +186,8 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
 
     def AvviaCheckArchivio(self, evt):
-        self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0 ,'tot_dirs': 0}
+        
+        #self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0 ,'tot_dirs': 0}
         self.duplicatedFilesDict.clear()
         self.Errors = 0
         self.CheckArchivio(self.globpropsHash['importfolder'])                
@@ -196,7 +198,10 @@ class PhotoManagerAppFrame(wx.Frame):
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
-            #Inserire qui il widget giusto per i file
+            duplicatedFilesView=wx.dataview.DataViewCtrl(self)
+            
+            duplicatedFilesView.Show
+            
 
 
         self.gauge.SetValue(0)
