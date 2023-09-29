@@ -91,7 +91,7 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title, *args, **kw):
         super().__init__(*args, **kw)
-        wx.Panel.__init__(self, parent, title=title, size=(700, 600))
+        wx.Panel.__init__(self, parent, title=title, size=(725, 600))
         max_gauge_size = 675
         self.checkRunning = True
         self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
@@ -120,31 +120,34 @@ class PhotoManagerAppFrame(wx.Frame):
         self.treeTitle = wx.StaticText(self, label="Scegliere Cartella File Da Importare:", pos=(5, 5), size=(345, 25))
 
         self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),
-                                          pos=(355, 5))
+                                          pos=(360, 400))
 
         self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file presenti nel folder Import ",
-                                                    pos=(5, 300))
+                                                    pos=(360, 30),size=(345,-1))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
-        self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(5, 325))
+        self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 145),size=(345,-1))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
-        self.avviaCheckArchivio = wx.Button(self, label="Avvia Check Archivio Master", pos=(5, 350))
+        self.avviaCheckArchivio = wx.Button(self, label="Avvia Controllo Duplicati Folder Selezionato", pos=(360, 55),size=(345,-1))
         self.avviaCheckArchivio.Bind(wx.EVT_BUTTON, self.AvviaCheckArchivio)
 
-        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Data/Ora", pos=(5, 375))
+        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Ora", pos=(360, 235),size=(345,-1))
         self.avviaFixDateTime.Bind(wx.EVT_BUTTON, self.AvviaFixDateTime)
 
 
-        self.esci = wx.Button(self, label="ESCI", pos=(5, 450), size=(350, -1))
+        self.esci = wx.Button(self, label="ESCI", pos=(5, 400), size=(350, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
-        self.importDirList = wx.GenericDirCtrl(self, pos=(5, 30), size=(345, 200), style=wx.DIRCTRL_DIR_ONLY)
+        self.importDirList = wx.GenericDirCtrl(self, pos=(5, 30), size=(345, 230), style=wx.DIRCTRL_DIR_ONLY)
         self.importDirList.SetPath("c:\\temp")
         self.importDirList.SelectPath("c:\\temp", select=True)
         self.importDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaImportFolder)
 
-        self.modoCopia = wx.RadioBox(self, label="Azione Su File Importati/Saltati:", majorDimension=3,
-                                     pos=(5, 230), size=(345, -1),
+        self.modoCopia = wx.RadioBox(self, label="Azione Su File Da Importare:", majorDimension=3,
+                                     pos=(360, 95), size=(345, -1),
                                      choices=["nessuna azione", "cestino archivio", "cestino windows"])
+        self.modoFixData = wx.RadioBox(self, label="Attraversare sotto-cartelle", majorDimension=2,
+                                     pos=(360, 185), size=(345, -1),
+                                     choices=["Sì", "No"])
 
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
         self.SetFocus()
@@ -199,6 +202,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaFixDateTime(self, evt):        
         self.Errors = 0
+        #inserire gestione ricorsione directory
         self.FixDateTime(self.globpropsHash['importfolder'],0,dirrecursion=True)                
         self.gauge.SetValue(self.gauge.GetRange())
         if self.Errors == 0:
