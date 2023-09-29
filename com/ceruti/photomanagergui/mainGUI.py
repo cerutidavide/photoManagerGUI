@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import logging
 import os
@@ -12,11 +13,16 @@ from PIL import UnidentifiedImageError
 from PIL.ExifTags import TAGS
 from PIL.TiffTags import TAGS
 from send2trash import send2trash
-
+import exiftool
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
 # NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
 
 
+
+# TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
+# 1. alberatura archivio corretta --> fatto
+# 2. impostazione/fix data per foto "sbagliate" --> da fare
+# 3. check duplicati (almeno lista in log e conteggio a video)  --> da finire
 # TODO FORMATTAZIONE LOG
 # TODO conteggio file e cartelle in check duplicati archivio
 # TODO conteggio errori copia
@@ -25,11 +31,13 @@ from send2trash import send2trash
 # TODO CONTROLLO PERMESSI
 # TODO sistemare pulsanti e barre di avanzamento
 # TODO riorganizzare interfaccia grafica
-# TODO EXIF SISTEMAZIONE DATA ORA
 # TODO EXIF SET GPS DATA ORA
 # TODO LIBRERIA PYTHON MD5 al posto dell'esecuzione del comando esterno
 # TODO check VERO DUPLICATI (con un dict, direttamente sull'archivio e fare anche statistiche sull'archivio)
 # TODO valutare database per statistiche
+# TODO valutare refactor "a oggetti" con vari moduli
+# TODO Impacchettare appliczione
+# TODO valutare/verificare multiplatform
 
 
 def loadFileExtensionList(self, filepath="/tmp/", extensionList=[], firstcall=True):
@@ -122,6 +130,10 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaCheckArchivio = wx.Button(self, label="Avvia Check Archivio Master", pos=(5, 350))
         self.avviaCheckArchivio.Bind(wx.EVT_BUTTON, self.AvviaCheckArchivio)
 
+        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Data/Ora", pos=(5, 375))
+        self.avviaFixDateTime.Bind(wx.EVT_BUTTON, self.AvviaFixDateTime)
+
+
         self.esci = wx.Button(self, label="ESCI", pos=(5, 450), size=(350, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
@@ -185,6 +197,44 @@ class PhotoManagerAppFrame(wx.Frame):
             okMD5.ShowModal()
         self.gauge.SetValue(0)
 
+    def AvviaFixDateTime(self, evt):        
+        self.Errors = 0
+        self.FixDateTime(self.globpropsHash['importfolder'],0,dirrecursion=True)                
+        self.gauge.SetValue(self.gauge.GetRange())
+        if self.Errors == 0:
+            okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - File elaborat\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
+            okCheck.ShowModal()
+        self.gauge.SetValue(0)
+
+    def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", round=0, dirrecursion=False):
+        id_log_counter_dir = str(self.fileCounter['tot_dirs'])
+        n = round + self.gauge.GetRange()
+        if os.path.exists(dir):
+            logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
+            for file in os.scandir(dir):
+                id_log_counter = str(self.fileCounter['tot_files'])
+                if file.is_dir():                    
+                    if dirrecursion==False:
+                        logger.debug("DIRECTORY %s_%s <NON ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,id_log_counter,str(file.path))                                        
+                    else:
+                        logger.debug("DIRECTORY %s_%s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,id_log_counter,str(file.path))  
+                        self.FixDateTime(file,n,True)                                      
+                else:
+                    logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
+                    with exiftool.ExifTool() as et:
+                        et.execute(file.path)
+                        print("TESTONE_OUT "+str(et.last_stdout))
+                        print("TESTONE_ERROR "+str(et.last_stderr))
+                        print("TESTONE CMD"+str(et.last_status))
+                n+=1
+            logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
+
+    
+
+
+
+
+
     def AvviaCheckArchivio(self, evt):
         
         #self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0 ,'tot_dirs': 0}
@@ -198,9 +248,6 @@ class PhotoManagerAppFrame(wx.Frame):
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
-            duplicatedFilesView=wx.dataview.DataViewCtrl(self)
-            
-            duplicatedFilesView.Show
             
 
 
