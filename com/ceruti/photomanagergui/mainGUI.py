@@ -20,9 +20,9 @@ import exiftool
 
 
 # TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
-# 1. alberatura archivio corretta --> fatto
-# 2. impostazione/fix data per foto "sbagliate" --> da fare
-# 3. check duplicati (almeno lista in log e conteggio a video)  --> da finire
+# 1. alberatura archivio corretta --> fatto  ma correggere conteggio
+# 2. impostazione/fix data per foto "sbagliate" --> da fare correggere conteggio
+# 3. check duplicati (almeno lista in log e conteggio a video)  --> da finire correggere conteggio
 # TODO FORMATTAZIONE LOG
 # TODO conteggio file e cartelle in check duplicati archivio
 # TODO conteggio errori copia
@@ -202,8 +202,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaFixDateTime(self, evt):        
         self.Errors = 0
-        #inserire gestione ricorsione directory
-        self.FixDateTime(self.globpropsHash['importfolder'],0,dirrecursion=True)                
+        self.FixDateTime(self.globpropsHash['importfolder'],0)                
         self.gauge.SetValue(self.gauge.GetRange())
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - File elaborat\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
@@ -213,12 +212,13 @@ class PhotoManagerAppFrame(wx.Frame):
     def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", round=0, dirrecursion=False):
         id_log_counter_dir = str(self.fileCounter['tot_dirs'])
         n = round + self.gauge.GetRange()
+        self.fixmode=self.modoFixData.GetSelection()
         if os.path.exists(dir):
             logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
             for file in os.scandir(dir):
                 id_log_counter = str(self.fileCounter['tot_files'])
                 if file.is_dir():                    
-                    if dirrecursion==False:
+                    if self.fixmode==1:
                         logger.debug("DIRECTORY %s_%s <NON ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,id_log_counter,str(file.path))                                        
                     else:
                         logger.debug("DIRECTORY %s_%s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,id_log_counter,str(file.path))  
@@ -227,9 +227,9 @@ class PhotoManagerAppFrame(wx.Frame):
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     with exiftool.ExifTool() as et:
                         et.execute(file.path)
-                        print("TESTONE_OUT "+str(et.last_stdout))
-                        print("TESTONE_ERROR "+str(et.last_stderr))
-                        print("TESTONE CMD"+str(et.last_status))
+                        #print("TESTONE_OUT "+str(et.last_stdout))
+                        #print("TESTONE_ERROR "+str(et.last_stderr))
+                        logger.debug("FILE %s_%s <RISULTATO CMD EXITOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
                 n+=1
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
 
