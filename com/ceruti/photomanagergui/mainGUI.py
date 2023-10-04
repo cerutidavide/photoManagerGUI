@@ -94,14 +94,18 @@ class PhotoManagerAppFrame(wx.Frame):
         wx.Panel.__init__(self, parent, title=title, size=(725, 600))
         max_gauge_size = 675
         self.checkRunning = True
-        self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
-        #self.basePath = "C:\\Users\\Davide\\PhotoManager"
+
+        if(os.path.exists("C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master")):
+            self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
+        if(os.path.exists("C:\\Users\\Davide\\PhotoManager")):
+            self.basePath="C:\\Users\\Davide\\PhotoManager"
         self.baseFile = "default.props"
         logger.info("###PARAMETRO FILE BASE### " + self.basePath + "\\" + self.baseFile + "\n")
         logger.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
-        logger.info(
-            "###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
+        logger.info("###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
         self.globpropsHash = CheckAndLoadProperties(self.basePath, self.baseFile, ".masterrepository.conf")
+
+
         # self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
         self.importDirFileExtensions = {}
@@ -122,34 +126,39 @@ class PhotoManagerAppFrame(wx.Frame):
         self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),
                                           pos=(360, 400))
 
-        self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file presenti nel folder Import ",
+        self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",
                                                     pos=(360, 30),size=(345,-1))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
-        self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 145),size=(345,-1))
+        self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 90),size=(345,-1))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
-        self.avviaCheckArchivio = wx.Button(self, label="Avvia Controllo Duplicati Folder Selezionato", pos=(360, 55),size=(345,-1))
+        self.modoCopia = wx.RadioBox(self, label="Azione Su File Da Importare:", majorDimension=3,
+                                     pos=(360, 120), size=(345, -1),
+                                     choices=["nessuna azione", "cestino archivio", "cestino windows"])
+        self.avviaCheckArchivio = wx.Button(self, label="Avvia Controllo Duplicati Cartella Selezionata", pos=(360, 55),size=(345,-1))
         self.avviaCheckArchivio.Bind(wx.EVT_BUTTON, self.AvviaCheckArchivio)
 
-        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Ora", pos=(360, 235),size=(345,-1))
+        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Orario Cartella Selezionata", pos=(360, 180),size=(345,-1))
         self.avviaFixDateTime.Bind(wx.EVT_BUTTON, self.AvviaFixDateTime)
+        self.modoFixData = wx.RadioBox(self, label="Attraversare Sotto Cartelle Sì/No", majorDimension=2,
+                                     pos=(360, 210), size=(345, -1),
+                                     choices=["Sì", "No"])
 
 
         self.esci = wx.Button(self, label="ESCI", pos=(5, 400), size=(350, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
         self.importDirList = wx.GenericDirCtrl(self, pos=(5, 30), size=(345, 230), style=wx.DIRCTRL_DIR_ONLY)
-        self.importDirList.SetPath("c:\\temp")
-        self.importDirList.SelectPath("c:\\temp", select=True)
+        if 'importfolder' not in self.globpropsHash.keys():
+            self.importDirList.SetPath("c:\\temp")
+            self.importDirList.SelectPath("c:\\temp", select=True)
+        else:
+            self.importDirList.SetPath(self.globpropsHash['importfolder'])
+            self.importDirList.SelectPath(self.globpropsHash['importfolder'], select=True)
         self.importDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaImportFolder)
 
-        self.modoCopia = wx.RadioBox(self, label="Azione Su File Da Importare:", majorDimension=3,
-                                     pos=(360, 95), size=(345, -1),
-                                     choices=["nessuna azione", "cestino archivio", "cestino windows"])
-        self.modoFixData = wx.RadioBox(self, label="Attraversare sotto-cartelle", majorDimension=2,
-                                     pos=(360, 185), size=(345, -1),
-                                     choices=["Sì", "No"])
 
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
+        self.SelezionaImportFolder()
         self.SetFocus()
         self.Center()
         self.Show(True)
@@ -160,14 +169,14 @@ class PhotoManagerAppFrame(wx.Frame):
             result = result + k + " = " + str(self.globpropsHash[k]) + "\n"
         return result
 
-    def SelezionaImportFolder(self, evt):
+    def SelezionaImportFolder(self):        
         if self.importDirList.GetPath():
             self.globpropsHash['importfolder'] = self.importDirList.GetPath()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
 
     def AvviaCaricaEstensioni(self, evt):
-        logger.debug("**********   " + self.globpropsHash['importfolder'])
-        self.SelezionaImportFolder(evt)
+
+        
         logger.debug("**********   " + self.globpropsHash['importfolder'])
         messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['importfolder'], True))
         messaggioFolderImport = self.globpropsHash['importfolder']
@@ -202,7 +211,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaFixDateTime(self, evt):        
         self.Errors = 0
-        self.FixDateTime(self.globpropsHash['importfolder'],0)                
+        self.FixDateTime(self.importDirList.GetPath(),0)                
         self.gauge.SetValue(self.gauge.GetRange())
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - File elaborat\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
@@ -229,7 +238,9 @@ class PhotoManagerAppFrame(wx.Frame):
                         et.execute(file.path)
                         #print("TESTONE_OUT "+str(et.last_stdout))
                         #print("TESTONE_ERROR "+str(et.last_stderr))
-                        logger.debug("FILE %s_%s <RISULTATO CMD EXITOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
+                        logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout))
+                        logger.debug("FILE %s_%s <STDERR CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stderr))
+                        logger.debug("FILE %s_%s <RISULTATO CMD EXIFTOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
                 n+=1
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
 
