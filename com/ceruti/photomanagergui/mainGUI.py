@@ -118,6 +118,19 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge = wx.Gauge(self, pos=(5, 540), size=(max_gauge_size, -1))
         self.gauge.SetRange(max_gauge_size)
         self.gauge.SetValue(0)
+
+        self.workingDirList = wx.GenericDirCtrl(self, pos=(5, 30), size=(345, 230), style=wx.DIRCTRL_DIR_ONLY)
+        if 'workingfolder' not in self.globpropsHash.keys():
+            self.workingDirList.SetPath("c:\\temp")
+            self.workingDirList.SelectPath("c:\\temp", select=True)
+            self.globpropsHash['workingfolder']="C:\\temp"
+        else:
+            self.workingDirList.SetPath(self.globpropsHash['workingfolder'])
+            self.workingDirList.SelectPath(self.globpropsHash['workingfolder'], select=True)
+        self.workingDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaWorkingDir)
+
+
+
         self.treeTitle = wx.StaticText(self, label="Scegliere Cartella File Da Importare:", pos=(5, 5), size=(345, 25))
 
         self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),
@@ -144,15 +157,6 @@ class PhotoManagerAppFrame(wx.Frame):
         self.esci = wx.Button(self, label="ESCI", pos=(5, 400), size=(350, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
-        self.importDirList = wx.GenericDirCtrl(self, pos=(5, 30), size=(345, 230), style=wx.DIRCTRL_DIR_ONLY)
-        if 'workingfolder' not in self.globpropsHash.keys():
-            self.importDirList.SetPath("c:\\temp")
-            self.importDirList.SelectPath("c:\\temp", select=True)
-            self.globpropsHash['workingfolder']="C:\\temp"
-        else:
-            self.importDirList.SetPath(self.globpropsHash['workingfolder'])
-            self.importDirList.SelectPath(self.globpropsHash['workingfolder'], select=True)
-        self.importDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaImportFolder)
 
 
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
@@ -167,15 +171,15 @@ class PhotoManagerAppFrame(wx.Frame):
             result = result + k + " = " + str(self.globpropsHash[k]) + "\n"
         return result
 
-    def SelezionaImportFolder(self,evt):        
-        if self.importDirList.GetPath():
-            self.globpropsHash['workingfolder'] = self.importDirList.GetPath()
+    def SelezionaWorkingDir(self,evt):        
+        if self.workingDirList.GetPath():
+            self.globpropsHash['workingfolder'] = self.workingDirList.GetPath()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
 
     def AvviaCaricaEstensioni(self, evt):
         logger.debug("**********  %s ",self.globpropsHash['workingfolder'])
-        messaggioEstensioni = str(loadFileExtensionList(self, self.importDirList.GetPath(), True))
-        messaggioFolderImport = self.importDirList.GetPath()
+        messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['workingfolder'], True))
+        messaggioFolderImport =self.globpropsHash['workingfolder']
         self.gauge.SetValue(self.gauge.GetRange())
         self.messageExtension = wx.MessageBox(
             "Nel folder import " + messaggioFolderImport + "\nci sono i seguenti tipi di file: \n" + messaggioEstensioni,
@@ -205,7 +209,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaFixDateTime(self, evt):        
         self.Errors = 0
-        self.FixDateTime(self.importDirList.GetPath(),0)                
+        self.FixDateTime(self.workingDirList.GetPath(),0)                
         self.gauge.SetValue(self.gauge.GetRange())
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - File elaborat\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
