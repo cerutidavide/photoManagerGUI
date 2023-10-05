@@ -104,12 +104,9 @@ class PhotoManagerAppFrame(wx.Frame):
         logger.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
         logger.info("###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
         self.globpropsHash = CheckAndLoadProperties(self.basePath, self.baseFile, ".masterrepository.conf")
-
-
         # self.globpropsHash = CheckAndLoadProperties("C:\\Users\\Davide\\PhotoManager", "default.props",".masterrepository.conf")
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
         self.importDirFileExtensions = {}
-
         self.importMd5fileHash = {}
         self.duplicatedFilesDict = {}
         self.duplicatedFilesListValues=[]
@@ -175,19 +172,15 @@ class PhotoManagerAppFrame(wx.Frame):
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
 
     def AvviaCaricaEstensioni(self, evt):
-
-        
-        logger.debug("**********   " + self.globpropsHash['importfolder'])
-        messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['importfolder'], True))
-        messaggioFolderImport = self.globpropsHash['importfolder']
+        logger.debug("**********  %s ",self.globpropsHash['importfolder'])
+        messaggioEstensioni = str(loadFileExtensionList(self, self.importDirList.GetPath(), True))
+        messaggioFolderImport = self.importDirList.GetPath()
         self.gauge.SetValue(self.gauge.GetRange())
         self.messageExtension = wx.MessageBox(
             "Nel folder import " + messaggioFolderImport + "\nci sono i seguenti tipi di file: \n" + messaggioEstensioni,
             '', wx.CLOSE)
         logger.info(messaggioEstensioni)
-
         self.gauge.SetValue(0)
-
 
     def Esci(self, evt):
         self.Close()
