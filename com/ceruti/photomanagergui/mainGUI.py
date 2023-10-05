@@ -77,10 +77,10 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
             if match:
                 myHashGlob['masterrepository'] = match[1]
                 logger.debug("<<Parametro letto nel file #masterrepository# " + str(match[1]))
-            match = re.search('^importfolder=(.*)', line)
+            match = re.search('^workingfolder=(.*)', line)
             if match:
-                myHashGlob['importfolder'] = match[1]
-                logger.debug("<<Parametro letto nel file #importfolder# " + str(match[1]))
+                myHashGlob['workingfolder'] = match[1]
+                logger.debug("<<Parametro letto nel file #workingfolder# " + str(match[1]))
             match = re.search('^importfilelist=(.*)', line)
             if match:
                 myHashGlob['importfilelist'] = match[1]
@@ -145,17 +145,18 @@ class PhotoManagerAppFrame(wx.Frame):
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
         self.importDirList = wx.GenericDirCtrl(self, pos=(5, 30), size=(345, 230), style=wx.DIRCTRL_DIR_ONLY)
-        if 'importfolder' not in self.globpropsHash.keys():
+        if 'workingfolder' not in self.globpropsHash.keys():
             self.importDirList.SetPath("c:\\temp")
             self.importDirList.SelectPath("c:\\temp", select=True)
+            self.globpropsHash['workingfolder']="C:\\temp"
         else:
-            self.importDirList.SetPath(self.globpropsHash['importfolder'])
-            self.importDirList.SelectPath(self.globpropsHash['importfolder'], select=True)
+            self.importDirList.SetPath(self.globpropsHash['workingfolder'])
+            self.importDirList.SelectPath(self.globpropsHash['workingfolder'], select=True)
         self.importDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaImportFolder)
 
 
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
-        self.SelezionaImportFolder()
+        
         self.SetFocus()
         self.Center()
         self.Show(True)
@@ -166,13 +167,13 @@ class PhotoManagerAppFrame(wx.Frame):
             result = result + k + " = " + str(self.globpropsHash[k]) + "\n"
         return result
 
-    def SelezionaImportFolder(self):        
+    def SelezionaImportFolder(self,evt):        
         if self.importDirList.GetPath():
-            self.globpropsHash['importfolder'] = self.importDirList.GetPath()
+            self.globpropsHash['workingfolder'] = self.importDirList.GetPath()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
 
     def AvviaCaricaEstensioni(self, evt):
-        logger.debug("**********  %s ",self.globpropsHash['importfolder'])
+        logger.debug("**********  %s ",self.globpropsHash['workingfolder'])
         messaggioEstensioni = str(loadFileExtensionList(self, self.importDirList.GetPath(), True))
         messaggioFolderImport = self.importDirList.GetPath()
         self.gauge.SetValue(self.gauge.GetRange())
@@ -189,7 +190,7 @@ class PhotoManagerAppFrame(wx.Frame):
     def AvviaCopiaFile(self, evt):
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0}
         self.importDirError = 0
-        self.CopiaFile(self.globpropsHash['importfolder'])
+        self.CopiaFile(self.globpropsHash['workingfolder'])
         self.duplicatedFilesDict.clear()
 
         self.skippedfileHash.clear()
@@ -248,7 +249,7 @@ class PhotoManagerAppFrame(wx.Frame):
         #self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0 ,'tot_dirs': 0}
         self.duplicatedFilesDict.clear()
         self.Errors = 0
-        self.CheckArchivio(self.globpropsHash['importfolder'])                
+        self.CheckArchivio(self.globpropsHash['workingfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Trovati: ")
         for k in self.duplicatedFilesDict.keys():
