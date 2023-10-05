@@ -91,7 +91,7 @@ class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title, *args, **kw):
         super().__init__(*args, **kw)
         wx.Panel.__init__(self, parent, title=title, size=(725, 700))
-        max_gauge_size = 675
+        max_gauge_size = 700
         self.checkRunning = True
 
         if(os.path.exists("C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master")):
@@ -148,15 +148,15 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Orario Cartella Selezionata", pos=(360, 180),size=(345,-1))
         self.avviaFixDateTime.Bind(wx.EVT_BUTTON, self.AvviaFixDateTime)
         self.modoFixData = wx.RadioBox(self, label="Attraversare Sotto Cartelle Sì/No", majorDimension=2,
-                                     pos=(355, 210), size=(345, -1),
+                                     pos=(360, 210), size=(345, -1),
                                      choices=["Sì", "No"])
 
 
-        self.esci = wx.Button(self, label="ESCI", pos=(360, 280), size=(330, -1))
+        self.esci = wx.Button(self, label="ESCI", pos=(360, 280), size=(345, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
         self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300),style=wx.TE_MULTILINE)
-        #self.outputWindow.AppendText('Ciao\n\n\n\n\n\nCiao\n\nCiao')
+        
 
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
         
