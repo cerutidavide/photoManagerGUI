@@ -87,11 +87,10 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
                 logger.debug("<<Parametro letto nel file #importfilelist# " + str(match[1]) + "\n")
     return myHashGlob
 
-
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title, *args, **kw):
         super().__init__(*args, **kw)
-        wx.Panel.__init__(self, parent, title=title, size=(725, 600))
+        wx.Panel.__init__(self, parent, title=title, size=(725, 700))
         max_gauge_size = 675
         self.checkRunning = True
 
@@ -114,7 +113,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.importDirError = 0
         self.copymode = 0
 
-        self.gauge = wx.Gauge(self, pos=(5, 540), size=(max_gauge_size, -1))
+        self.gauge = wx.Gauge(self, pos=(5, 640), size=(max_gauge_size, -1))
         self.gauge.SetRange(max_gauge_size)
         self.gauge.SetValue(0)
 
@@ -130,7 +129,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
 
-        self.treeTitle = wx.StaticText(self, label="Scegliere Cartella File Da Importare:", pos=(5, 5), size=(345, 25))
+        self.treeTitle = wx.StaticText(self, label="Scegliere Cartella di lavoro per le azioni sulla destra:", pos=(5, 5), size=(345, 25))
 
         self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),
                                           pos=(360, 400))
@@ -149,14 +148,15 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Orario Cartella Selezionata", pos=(360, 180),size=(345,-1))
         self.avviaFixDateTime.Bind(wx.EVT_BUTTON, self.AvviaFixDateTime)
         self.modoFixData = wx.RadioBox(self, label="Attraversare Sotto Cartelle Sì/No", majorDimension=2,
-                                     pos=(360, 210), size=(345, -1),
+                                     pos=(355, 210), size=(345, -1),
                                      choices=["Sì", "No"])
 
 
-        self.esci = wx.Button(self, label="ESCI", pos=(5, 400), size=(350, -1))
+        self.esci = wx.Button(self, label="ESCI", pos=(360, 280), size=(330, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
-
+        self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300),style=wx.TE_MULTILINE)
+        #self.outputWindow.AppendText('Ciao\n\n\n\n\n\nCiao\n\nCiao')
 
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
         
@@ -254,11 +254,23 @@ class PhotoManagerAppFrame(wx.Frame):
         self.Errors = 0
         self.CheckArchivio(self.globpropsHash['workingfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
+        tot_files=0
         logger.info("Dictionary File Trovati: ")
+        outputWindowText=''
         for k in self.duplicatedFilesDict.keys():
             logger.info("chiave >>> %s  valore >>> %s",k,self.duplicatedFilesDict[k])
+            tot_files+=len(self.duplicatedFilesDict[k])
+            if len(self.duplicatedFilesDict[k])>1:
+                outputWindowText+='<<<<'+k+'>>>>\n'
+                for item in self.duplicatedFilesDict[k]:
+                    outputWindowText+='-->'+item+'\n'
+                outputWindowText+='<<<< END >>>>\n'
+                pass   
+        logger.debug("Numero di file distinti: %s",len(self.duplicatedFilesDict.keys()))
+        logger.debug("Numero di file totali: %s",tot_files)
+        self.outputWindow.SetValue(outputWindowText)
         if self.Errors == 0:
-            okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - Check Archivio Terminato\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
+            okCheck = wx.MessageDialog(self, "FUNZIONE DA COMPLETARE - Check Archivio Terminato\n\nFile distinti trovati: "+str(len(self.duplicatedFilesDict.keys()))+"\n\nFile totali trovati: "+str(tot_files), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
             
 
