@@ -1,4 +1,5 @@
 import datetime
+import datetime
 import hashlib
 import logging
 import os
@@ -102,7 +103,19 @@ class PhotoManagerAppFrame(wx.Frame):
         logger.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
         logger.info("###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
         self.globpropsHash = CheckAndLoadProperties(self.basePath, self.baseFile, ".masterrepository.conf")
+
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
+        self.globpropsHash['f_copia'] = dict()
+        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
+        self.globpropsHash['f_checkarchivio'] = dict()
+        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
+        self.globpropsHash['f_listaestensioni'] = dict()
+        self.globpropsHash['f_copia']['copied'] = []
+        self.globpropsHash['f_copia']['skipped'] = []
+        self.globpropsHash['f_copia']['tot_files'] = []
+        self.globpropsHash['f_copia']['tot_dirs'] = []
+        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
+
         self.importDirFileExtensions = {}
         self.importMd5fileHash = {}
         self.duplicatedFilesDict = {}
