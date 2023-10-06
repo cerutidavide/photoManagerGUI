@@ -251,9 +251,9 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
         self.duplicatedFilesDict.clear()
         self.Errors = 0
+        tot_files=0
         self.CheckArchivio(self.globpropsHash['workingfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
-        tot_files=0
         logger.info("Dictionary File Trovati: ")
         outputWindowText=''
         for k in self.duplicatedFilesDict.keys():
@@ -271,21 +271,17 @@ class PhotoManagerAppFrame(wx.Frame):
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA COMPLETARE - Check Archivio Terminato\n\nFile distinti trovati: "+str(len(self.duplicatedFilesDict.keys()))+"\n\nFile totali trovati: "+str(tot_files), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
-            
 
-
-        
-
-    def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport", round=0):
-        id_log_counter_dir = str(self.fileCounter['tot_dirs'])
-        n = round + self.gauge.GetRange()
+    def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport"):
+        id_log_counter_dir = str(self.fileCounter['tot_dirs'])        
+        self.gauge.SetValue(self.fileCounter['tot_files'])
         if os.path.exists(dir):
             logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
             for file in os.scandir(dir):
                 id_log_counter = str(self.fileCounter['tot_files'])
                 if file.is_dir():                    
                     logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                    
-                    self.CheckArchivio(file, n)
+                    self.CheckArchivio(file)
                 else:
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     logger.debug("FILE %s_%s  <APERTURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
@@ -304,6 +300,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         fmd5.close()
                         logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     self.fileCounter['tot_files']+=1
+                    self.gauge.SetValue(self.fileCounter['tot_files'])
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport", round=0):
@@ -426,35 +423,12 @@ class PhotoManagerAppFrame(wx.Frame):
 if __name__ == '__main__':
     
     logger = logging.getLogger('photoark')
-    
-    #logger.propagate = False
-    #logger.setLevel(logging.DEBUG)
-    #ch = logging.StreamHandler()
-    #formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(msg)s')
-    #ch.setFormatter(formatter)
-    #logger.addHandler(ch)
-
-    
-    
-    #logger = logging.getLogger('photoark')
-    
     stdout = logging.StreamHandler()
-    
-    #fmt = logging.Formatter("%(name)s: %(asctime)s | %(levelname)s | %(filename)s%(lineno)s | %(process)d >>> %(message)s")
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-
     logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-    
-
-
-
-
-
-    
+    logger.propagate = False    
     PhotoManagerApp = wx.App()
     framePrincipale = PhotoManagerAppFrame(None, "PhotoManager")
     PhotoManagerApp.MainLoop()
