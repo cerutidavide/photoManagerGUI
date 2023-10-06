@@ -248,8 +248,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
     def AvviaCheckArchivio(self, evt):
-        
-        #self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0 ,'tot_dirs': 0}
+        self.gauge.SetValue(0)
         self.duplicatedFilesDict.clear()
         self.Errors = 0
         self.CheckArchivio(self.globpropsHash['workingfolder'])                
@@ -261,10 +260,10 @@ class PhotoManagerAppFrame(wx.Frame):
             logger.info("chiave >>> %s  valore >>> %s",k,self.duplicatedFilesDict[k])
             tot_files+=len(self.duplicatedFilesDict[k])
             if len(self.duplicatedFilesDict[k])>1:
-                outputWindowText+='<<<<'+k+'>>>>\n'
+                outputWindowText+='<<<< INIZIO '+k+'>>>>\n'
                 for item in self.duplicatedFilesDict[k]:
-                    outputWindowText+='-->'+item+'\n'
-                outputWindowText+='<<<< END >>>>\n'
+                    outputWindowText+='-'+str(self.duplicatedFilesDict[k].index(item)+1)+'>'+item+'\n'
+                outputWindowText+='<<<< FINE '+k+'>>>>\n\n'
                 pass   
         logger.debug("Numero di file distinti: %s",len(self.duplicatedFilesDict.keys()))
         logger.debug("Numero di file totali: %s",tot_files)
@@ -275,7 +274,7 @@ class PhotoManagerAppFrame(wx.Frame):
             
 
 
-        self.gauge.SetValue(0)
+        
 
     def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport", round=0):
         id_log_counter_dir = str(self.fileCounter['tot_dirs'])
@@ -305,7 +304,6 @@ class PhotoManagerAppFrame(wx.Frame):
                         fmd5.close()
                         logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     self.fileCounter['tot_files']+=1
-                n+=1
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport", round=0):
