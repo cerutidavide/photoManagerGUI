@@ -193,9 +193,6 @@ class PhotoManagerAppFrame(wx.Frame):
         self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0}
         self.importDirError = 0
         self.CopiaFile(self.globpropsHash['workingfolder'])
-        self.duplicatedFilesDict.clear()
-
-        self.skippedfileHash.clear()
         self.gauge.SetValue(self.gauge.GetRange())
         if self.importDirError == 0:
             okMD5 = wx.MessageDialog(self, "Import File Terminato\n\n" + "File copiati: " + str(
