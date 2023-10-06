@@ -20,9 +20,8 @@ import exiftool
 
 
 # TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
-# 1. alberatura archivio corretta --> fatto  ma correggere conteggio
+# 1. alberatura archivio corretta --> fatto  ma correggere conteggio log
 # 2. impostazione/fix data per foto "sbagliate" --> da fare correggere conteggio
-# 3. check duplicati (almeno lista in log e conteggio a video)  --> da finire correggere conteggio
 # TODO FORMATTAZIONE LOG
 # TODO conteggio file e cartelle in check duplicati archivio
 # TODO conteggio errori copia
@@ -271,7 +270,7 @@ class PhotoManagerAppFrame(wx.Frame):
         if self.Errors == 0:
             okCheck = wx.MessageDialog(self, "FUNZIONE DA COMPLETARE - Check Archivio Terminato\n\nFile distinti trovati: "+str(len(self.duplicatedFilesDict.keys()))+"\n\nFile totali trovati: "+str(tot_files), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
-
+        self.gauge.SetValue(0)
     def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport"):
         id_log_counter_dir = str(self.fileCounter['tot_dirs'])        
         self.gauge.SetValue(self.fileCounter['tot_files'])
