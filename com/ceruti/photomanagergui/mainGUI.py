@@ -328,7 +328,7 @@ class PhotoManagerAppFrame(wx.Frame):
             for file in os.scandir(dir):
                 id_log_counter_file =len(self.globpropsHash['f_copia']['tot_files'])
                 if file.is_dir():
-                    self.globpropsHash['f_copia']['tot_dirs'].append(file)
+                    self.globpropsHash['f_copia']['tot_dirs'].append(file.path)
                     logger.debug("FILE " + str(id_log_counter_dir) + "_" + str(
                         id_log_counter_file) + " <è una directory> " + file.path)
                     self.CopiaFile(file)
