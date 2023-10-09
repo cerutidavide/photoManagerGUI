@@ -21,9 +21,10 @@ import exiftool
 
 
 # TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
-# 1. alberatura archivio corretta --> fatto  ma correggere conteggio log
-# 2. impostazione/fix data per foto "sbagliate" --> da fare correggere conteggio
+# 1. impostazione/fix data per foto "sbagliate" --> da fare correggere conteggio nb controllare quali sono i campi effettivi in cui si salvano le date corrette (verificare tag exif e anche tag file e check cosa vede il sistema operativo)
 # TODO FORMATTAZIONE LOG
+# TODO gestione immagini non riconosciute con Exitool
+# TODO valutare "con e senza exif tool"
 # TODO conteggio file e cartelle in check duplicati archivio
 # TODO conteggio errori copia
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
@@ -32,7 +33,6 @@ import exiftool
 # TODO sistemare pulsanti e barre di avanzamento
 # TODO riorganizzare interfaccia grafica
 # TODO EXIF SET GPS DATA ORA
-# TODO LIBRERIA PYTHON MD5 al posto dell'esecuzione del comando esterno
 # TODO check VERO DUPLICATI (con un dict, direttamente sull'archivio e fare anche statistiche sull'archivio)
 # TODO valutare database per statistiche
 # TODO valutare refactor "a oggetti" con vari moduli
@@ -114,6 +114,13 @@ class PhotoManagerAppFrame(wx.Frame):
         self.globpropsHash['f_copia']['skipped'] = []
         self.globpropsHash['f_copia']['tot_files'] = []
         self.globpropsHash['f_copia']['tot_dirs'] = []
+        
+        self.globpropsHash['f_fixdate'] = dict()
+        self.globpropsHash['f_fixdate']['fixed'] = []
+        self.globpropsHash['f_fixdate']['skipped'] = []
+        self.globpropsHash['f_fixdate']['tot_files'] = []
+        self.globpropsHash['f_fixdate']['tot_dirs'] = []
+
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
 
         self.importDirFileExtensions = {}
@@ -175,7 +182,20 @@ class PhotoManagerAppFrame(wx.Frame):
         self.SetFocus()
         self.Center()
         self.Show(True)
+    def CleanConfigFunction(self):
+        #potrei spianare tutti i dict le cui chiavi iniziano per f_
+        self.globpropsHash['f_copia']['tot_dirs'].clear()
+        self.globpropsHash['f_copia']['tot_files'].clear()
+        self.globpropsHash['f_copia']['skipped'].clear()
+        self.globpropsHash['f_copia']['copied'].clear()
+        self.globpropsHash['f_fixdate']['fixed'].clear()
+        self.globpropsHash['f_fixdate']['skipped'].clear()
+        self.globpropsHash['f_fixdate']['tot_files'].clear()
+        self.globpropsHash['f_fixdate']['tot_dirs'].clear()
 
+    
+    
+    
     def stringFormattedHash(self):
         result = ""
         for k in self.globpropsHash.keys():
@@ -205,38 +225,55 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaFixDateTime(self, evt):        
         self.Errors = 0
-        self.FixDateTime(self.workingDirList.GetPath(),0)                
+        self.CleanConfigFunction()
+        self.FixDateTime(self.globpropsHash['workingfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
         if self.Errors == 0:
-            okCheck = wx.MessageDialog(self, "FUNZIONE DA IMPLEMENTARE - File elaborat\n\nFile analizzati: "+str(self.fileCounter['tot_files'])+"\nSotto cartelle analizzate: "+str(self.fileCounter['tot_dirs']), style=wx.ICON_INFORMATION, caption="Check Terminato")
+            okCheck = wx.MessageDialog(self, "FUNZIONE DA COMPLETARE - File sistemati: "+str(len(self.globpropsHash['f_fixdate']['fixed']))+"\n\nFile totali: "+str(len(self.globpropsHash['f_fixdate']['tot_files']))+"\n\nCartelle percorse: "+str(len(self.globpropsHash['f_fixdate']['tot_dirs'])), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
         self.gauge.SetValue(0)
 
-    def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", round=0, dirrecursion=False):
-        id_log_counter_dir = str(self.fileCounter['tot_dirs'])
-        n = round + self.gauge.GetRange()
+    def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):
+        
         self.fixmode=self.modoFixData.GetSelection()
         if os.path.exists(dir):
-            logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
-            for file in os.scandir(dir):
-                id_log_counter = str(self.fileCounter['tot_files'])
+            id_log_counter_dir = str(len(self.globpropsHash['f_fixdate']['tot_dirs']))
+            logger.info("<<<INIZIO CARTELLA>>> <<< %s >>>",dir)
+            self.globpropsHash['f_fixdate']['tot_dirs'].append(dir)
+            for file in os.scandir(dir):                
                 if file.is_dir():                    
                     if self.fixmode==1:
-                        logger.debug("DIRECTORY %s_%s <NON ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,id_log_counter,str(file.path))                                        
+                        logger.debug("DIRECTORY %s <NON ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,str(file.path))                                        
                     else:
-                        logger.debug("DIRECTORY %s_%s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,id_log_counter,str(file.path))  
-                        self.FixDateTime(file,n,True)                                      
+                        logger.debug("DIRECTORY %s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,str(file.path))                          
+                        self.FixDateTime(file,True)                                      
                 else:
+                    id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
+                    
+
                     with exiftool.ExifTool() as et:
                         et.execute(file.path)
-                        #print("TESTONE_OUT "+str(et.last_stdout))
-                        #print("TESTONE_ERROR "+str(et.last_stderr))
                         logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout))
                         logger.debug("FILE %s_%s <STDERR CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stderr))
                         logger.debug("FILE %s_%s <RISULTATO CMD EXIFTOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
-                n+=1
-            logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
+                        self.globpropsHash['f_fixdate']['tot_files'].append(str(file.path))
+                    # with Image.open(pathlib.Path(file)) as image:
+                    #     imageExif=image.getexif()
+                    #     for (k,v) in imageExif.items():
+                            
+                    #         logger.debug("FILE %s_%s <APERTURA CON IMAGEIO chiave: %s chiaveString: %s valore: %s: ",id_log_counter_dir,id_log_counter,str(k),str(TAGS.get(k,k)),str(v))
+            logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)    
+
+#   intanto pare che il modify date sia il campo giusto (id 306 di EXIF)
+#   IMAGEIO non legge qualcosa mentre exiftool legge tutto--> inutile usare IMAGEIO A REGIME per questa funzione (scrittura EXIF)
+#   gestione input --> aggiungere date picker e time picker per adesso delta in ore e fisso
+#   esempio >exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
+#   exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
+#
+#
+#
+#
 
     
 
@@ -314,12 +351,7 @@ class PhotoManagerAppFrame(wx.Frame):
             okMD5.ShowModal()
         self.gauge.SetValue(0)
 
-    def CleanConfigFunction(self):
-        #potrei spianare tutti i dict le cui chiavi iniziano per f_
-        self.globpropsHash['f_copia']['tot_dirs'].clear()
-        self.globpropsHash['f_copia']['tot_files'].clear()
-        self.globpropsHash['f_copia']['skipped'].clear()
-        self.globpropsHash['f_copia']['copied'].clear()
+
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport"):
         id_log_counter_dir =len(self.globpropsHash['f_copia']['tot_dirs'])
