@@ -1,5 +1,4 @@
 import datetime
-import datetime
 import hashlib
 import logging
 import os
@@ -15,6 +14,8 @@ from PIL.ExifTags import TAGS
 from PIL.TiffTags import TAGS
 from send2trash import send2trash
 import exiftool
+from datetime import datetime
+from exiftool.exceptions import ExifToolException
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
 # NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
 
@@ -85,7 +86,13 @@ def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photo
             if match:
                 myHashGlob['importfilelist'] = match[1]
                 logger.debug("<<Parametro letto nel file #importfilelist# " + str(match[1]) + "\n")
+            match = re.search('^masterrepository_bin=(.*)', line)
+            if match:
+                myHashGlob['masterrepository_bin'] = match[1]
+                logger.debug("<<Parametro letto nel file #masterrepository_bin# " + str(match[1]) + "\n")
+
     return myHashGlob
+
 
 class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title, *args, **kw):
@@ -192,7 +199,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.globpropsHash['f_fixdate']['skipped'].clear()
         self.globpropsHash['f_fixdate']['tot_files'].clear()
         self.globpropsHash['f_fixdate']['tot_dirs'].clear()
-
+        self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
     
     
     
@@ -232,7 +239,7 @@ class PhotoManagerAppFrame(wx.Frame):
             okCheck = wx.MessageDialog(self, "FUNZIONE DA COMPLETARE - File sistemati: "+str(len(self.globpropsHash['f_fixdate']['fixed']))+"\n\nFile totali: "+str(len(self.globpropsHash['f_fixdate']['tot_files']))+"\n\nCartelle percorse: "+str(len(self.globpropsHash['f_fixdate']['tot_dirs'])), style=wx.ICON_INFORMATION, caption="Check Terminato")
             okCheck.ShowModal()
         self.gauge.SetValue(0)
-
+        self.CleanConfigFunction()
     def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):
         
         self.fixmode=self.modoFixData.GetSelection()
@@ -253,16 +260,33 @@ class PhotoManagerAppFrame(wx.Frame):
                     
 
                     with exiftool.ExifTool() as et:
-                        et.execute(file.path)
-                        logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout))
-                        logger.debug("FILE %s_%s <STDERR CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stderr))
-                        logger.debug("FILE %s_%s <RISULTATO CMD EXIFTOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
-                        self.globpropsHash['f_fixdate']['tot_files'].append(str(file.path))
-                    # with Image.open(pathlib.Path(file)) as image:
-                    #     imageExif=image.getexif()
-                    #     for (k,v) in imageExif.items():
+                        #Al momento fisso a 7 ore
+                        deltaDateTime='00:00:00 07:00:00'
+                        exiftoolModDatePar='-ModifyDate+=\"'+deltaDateTime+'\"'
+                        exiftoolCreateDatePar='-CreateDate+=\"'+deltaDateTime+'\"'
+                        exiftoolOrigDatePar='-DateTimeOriginal+=\"'+deltaDateTime+'\"'
+                        logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
+                        
+                        try:
+                            et.execute(exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar,file.path)
                             
-                    #         logger.debug("FILE %s_%s <APERTURA CON IMAGEIO chiave: %s chiaveString: %s valore: %s: ",id_log_counter_dir,id_log_counter,str(k),str(TAGS.get(k,k)),str(v))
+                            srcbckfullfilename=str(file.path)+'_original'                            
+                            dstbckfilename=str(file.name)+'_original'                            
+                            dstbckfoldername=self.globpropsHash['masterrepository_bin']
+                            dstbckfullfilename=dstbckfoldername+'\\'+str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'+dstbckfilename
+                            
+                            logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
+                            logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout))
+                            logger.debug("FILE %s_%s <STDERR CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stderr))
+                            logger.debug("FILE %s_%s <RISULTATO CMD EXIFTOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
+                            if et.last_status==0:
+                                logger.debug("FILE %s_%s <SRC: %s> <DST: %s>",id_log_counter_dir,id_log_counter,srcbckfullfilename,dstbckfullfilename)
+                                shutil.move(srcbckfullfilename, dstbckfullfilename ,copy_function='copy2')
+                            else:
+                                logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ",file.path)                                
+                        except IOError as e:
+                            logger.error("<<ERRORE SPOSTAMENTO FILE BACKUP: %s su %s ",srcbckfullfilename,dstbckfullfilename)                            
+                        self.globpropsHash['f_fixdate']['tot_files'].append(str(file.path))
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)    
 
 #   intanto pare che il modify date sia il campo giusto (id 306 di EXIF)
@@ -350,7 +374,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                      style=wx.ICON_INFORMATION, caption="Copia Terminata")
             okMD5.ShowModal()
         self.gauge.SetValue(0)
-
+        self.CleanConfigFunction()
 
 
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport"):
