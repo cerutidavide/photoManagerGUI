@@ -320,16 +320,19 @@ class PhotoManagerAppFrame(wx.Frame):
         self.CheckArchivio(self.globpropsHash['workingfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Trovati: ")
+        found_duplicate = False
         outputWindowText=''
         for k in self.duplicatedFilesDict.keys():
             logger.info("chiave >>> %s  valore >>> %s",k,self.duplicatedFilesDict[k])
             tot_files+=len(self.duplicatedFilesDict[k])
             if len(self.duplicatedFilesDict[k])>1:
+                found_duplicate=True
                 outputWindowText+='<<<< INIZIO '+k+'>>>>\n'
                 for item in self.duplicatedFilesDict[k]:
                     outputWindowText+='-'+str(self.duplicatedFilesDict[k].index(item)+1)+'>'+item+'\n'
                 outputWindowText+='<<<< FINE '+k+'>>>>\n\n'
-                pass   
+        if not found_duplicate:
+            outputWindowText += 'NON sono stati trovati DUPLICATI\n'
         logger.debug("Numero di file distinti: %s",len(self.duplicatedFilesDict.keys()))
         logger.debug("Numero di file totali: %s",tot_files)
         self.outputWindow.SetValue(outputWindowText)
