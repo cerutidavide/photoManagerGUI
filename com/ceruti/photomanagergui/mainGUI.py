@@ -200,20 +200,15 @@ class PhotoManagerAppFrame(wx.Frame):
         self.globpropsHash['f_fixdate']['tot_files'].clear()
         self.globpropsHash['f_fixdate']['tot_dirs'].clear()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
-    
-    
-    
     def stringFormattedHash(self):
         result = ""
         for k in self.globpropsHash.keys():
             result = result + k + " = " + str(self.globpropsHash[k]) + "\n"
         return result
-
     def SelezionaWorkingDir(self,evt):        
         if self.workingDirList.GetPath():
             self.globpropsHash['workingfolder'] = self.workingDirList.GetPath()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
-
     def AvviaCaricaEstensioni(self, evt):
         logger.debug("**********  %s ",self.globpropsHash['workingfolder'])
         messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['workingfolder'], True))
@@ -231,21 +226,35 @@ class PhotoManagerAppFrame(wx.Frame):
 
 
     def AvviaFixDateTime(self, evt):        
-        self.Errors = 0
         self.CleanConfigFunction()
         self.FixDateTime(self.globpropsHash['workingfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
-        if self.Errors == 0:
-            okCheck = wx.MessageDialog(self, "FUNZIONE DA COMPLETARE - File sistemati: "+str(len(self.globpropsHash['f_fixdate']['fixed']))+"\n\nFile totali: "+str(len(self.globpropsHash['f_fixdate']['tot_files']))+"\n\nCartelle percorse: "+str(len(self.globpropsHash['f_fixdate']['tot_dirs'])), style=wx.ICON_INFORMATION, caption="Check Terminato")
-            okCheck.ShowModal()
+        logger.info("Dictionary File Da trattare: ")
+        outputWindowText=''
+        outputWindowText+='<<<< FILE AGGIORNATI: '+str(len(self.globpropsHash['f_fixdate']['fixed']))+' >>>>\n'
+        n=1
+        for f in self.globpropsHash['f_fixdate']['fixed']:
+            logger.info("fixed file >>> %s ",f)
+            outputWindowText+=str(n)+'-->'+f+"\n"
+            n+=1                                                   
+        outputWindowText+='\n<<<< FILE SALTATI: '+str(len(self.globpropsHash['f_fixdate']['skipped']))+' >>>>\n'            
+        n=1    
+        for s in self.globpropsHash['f_fixdate']['skipped']:
+            logger.info("skipped file >>> %s ",s)
+            outputWindowText+=str(n)+'-->'+s+"\n"
+            n+=1            
+        logger.debug("Numero di file aggiornati: %s",len(self.globpropsHash['f_fixdate']['fixed']))
+        logger.debug("Numero di file saltati: %s",len(self.globpropsHash['f_fixdate']['skipped']))
+        self.outputWindow.SetValue(outputWindowText)
+#        okCheck = wx.MessageDialog(self, "File aggiornati: "+str(len(self.globpropsHash['f_fixdate']['fixed']))+" su un totale di "+str(len(self.globpropsHash['f_fixdate']['tot_files']))+"\nFile saltati: "+str(len(self.globpropsHash['f_fixdate']['skipped']))+"\nCartelle percorse: "+str(len(self.globpropsHash['f_fixdate']['tot_dirs'])), style=wx.ICON_INFORMATION, caption="Check Terminato")
+#        okCheck.ShowModal()
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
-    def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):
-        
+    def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):        
         self.fixmode=self.modoFixData.GetSelection()
         if os.path.exists(dir):
             id_log_counter_dir = str(len(self.globpropsHash['f_fixdate']['tot_dirs']))
-            logger.info("<<<INIZIO CARTELLA>>> <<< %s >>>",dir)
+            logger.info("<<<INIZIO CARTELLA %s >>>",dir)
             self.globpropsHash['f_fixdate']['tot_dirs'].append(dir)
             for file in os.scandir(dir):                
                 if file.is_dir():                    
@@ -257,8 +266,6 @@ class PhotoManagerAppFrame(wx.Frame):
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
-                    
-
                     with exiftool.ExifTool() as et:
                         #Al momento fisso a 7 ore
                         deltaDateTime='00:00:00 07:00:00'
@@ -266,24 +273,24 @@ class PhotoManagerAppFrame(wx.Frame):
                         exiftoolCreateDatePar='-CreateDate+=\"'+deltaDateTime+'\"'
                         exiftoolOrigDatePar='-DateTimeOriginal+=\"'+deltaDateTime+'\"'
                         logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
-                        
                         try:
-                            et.execute(exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar,file.path)
-                            
+                            et.execute(exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar,file.path)                            
                             srcbckfullfilename=str(file.path)+'_original'                            
                             dstbckfilename=str(file.name)+'_original'                            
                             dstbckfoldername=self.globpropsHash['masterrepository_bin']
-                            dstbckfullfilename=dstbckfoldername+'\\'+str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'+dstbckfilename
-                            
+                            dstbckfullfilename=dstbckfoldername+'\\'+str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'+dstbckfilename                            
                             logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
-                            logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout))
+                            logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout).replace('\n',''))
                             logger.debug("FILE %s_%s <STDERR CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stderr))
                             logger.debug("FILE %s_%s <RISULTATO CMD EXIFTOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
-                            if et.last_status==0:
+                            test='prova'
+                            if et.last_status==0 and et.last_stdout.rfind('unchanged')<0 :
                                 logger.debug("FILE %s_%s <SRC: %s> <DST: %s>",id_log_counter_dir,id_log_counter,srcbckfullfilename,dstbckfullfilename)
+                                self.globpropsHash['f_fixdate']['fixed'].append(str(file.path))        
                                 shutil.move(srcbckfullfilename, dstbckfullfilename ,copy_function='copy2')
                             else:
-                                logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ",file.path)                                
+                                logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ",file.path) 
+                                self.globpropsHash['f_fixdate']['skipped'].append(str(file.path))        
                         except IOError as e:
                             logger.error("<<ERRORE SPOSTAMENTO FILE BACKUP: %s su %s ",srcbckfullfilename,dstbckfullfilename)                            
                         self.globpropsHash['f_fixdate']['tot_files'].append(str(file.path))
