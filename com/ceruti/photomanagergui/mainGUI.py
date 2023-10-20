@@ -258,7 +258,8 @@ class PhotoManagerAppFrame(wx.Frame):
             id_log_counter_dir = str(len(self.globpropsHash['f_fixdate']['tot_dirs']))
             logger.info("<<<INIZIO CARTELLA %s >>>",dir)
             self.globpropsHash['f_fixdate']['tot_dirs'].append(dir)
-            for file in os.scandir(dir):                
+            dir_iterator=os.scandir(dir)
+            for file in dir_iterator:
                 if file.is_dir():                    
                     if self.fixmode==1:
                         logger.debug("DIRECTORY %s <NON ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,str(file.path))                                        
@@ -287,7 +288,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             logger.debug("FILE %s_%s <RISULTATO CMD EXIFTOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
                             if et.last_status==0 and et.last_stdout.rfind('unchanged')<0 :
                                 logger.debug("FILE %s_%s <SRC: %s> <DST: %s>",id_log_counter_dir,id_log_counter,srcbckfullfilename,dstbckfullfilename)
-                                self.globpropsHash['f_fixdate']['fixed'].append(str(file.path))        
+                                self.globpropsHash['f_fixdate']['fixed'].append(str(file.path))
                                 shutil.move(srcbckfullfilename, dstbckfullfilename ,copy_function='copy2')
                             else:
                                 logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ",file.path) 
@@ -295,7 +296,8 @@ class PhotoManagerAppFrame(wx.Frame):
                         except IOError as e:
                             logger.error("<<ERRORE SPOSTAMENTO FILE BACKUP: %s su %s ",srcbckfullfilename,dstbckfullfilename)                            
                         self.globpropsHash['f_fixdate']['tot_files'].append(str(file.path))
-            logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)    
+            dir_iterator.close()
+            logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)
 
 #   intanto pare che il modify date sia il campo giusto (id 306 di EXIF)
 #   IMAGEIO non legge qualcosa mentre exiftool legge tutto--> inutile usare IMAGEIO A REGIME per questa funzione (scrittura EXIF)
