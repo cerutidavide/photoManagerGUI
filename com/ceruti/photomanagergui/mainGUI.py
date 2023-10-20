@@ -6,6 +6,9 @@ import pathlib
 import re
 import shutil
 import time
+from datetime import datetime
+
+import exiftool
 import wx
 import wx.dataview
 from PIL import Image
@@ -13,9 +16,8 @@ from PIL import UnidentifiedImageError
 from PIL.ExifTags import TAGS
 from PIL.TiffTags import TAGS
 from send2trash import send2trash
-import exiftool
-from datetime import datetime
-from exiftool.exceptions import ExifToolException
+
+
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
 # NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
 
@@ -63,7 +65,7 @@ def loadFileExtensionList(self, filepath="/tmp/", extensionList=[], firstcall=Tr
     return extensionList
 
 
-def CheckAndLoadProperties(workingdir='c:\\Users\\Davide\\PycharmProjects\\photoManagerGUI',
+def CheckAndLoadProperties(workingdir='c:\\Utenti\\Davide\\photoManagerGUI',
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
     myHashGlob['fileconfprincipale'] = filenameGlob
@@ -227,7 +229,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaFixDateTime(self, evt):        
         self.CleanConfigFunction()
-        self.FixDateTime(self.globpropsHash['workingfolder'])                
+        self.FixDateTime(self.globpropsHash['workingfolder'],False)
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Da trattare: ")
         outputWindowText=''
@@ -267,11 +269,11 @@ class PhotoManagerAppFrame(wx.Frame):
                     id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     with exiftool.ExifTool() as et:
-                        #Al momento fisso a 7 ore
+                        #Al momento fisso a -7 ore
                         deltaDateTime='00:00:00 07:00:00'
-                        exiftoolModDatePar='-ModifyDate+=\"'+deltaDateTime+'\"'
-                        exiftoolCreateDatePar='-CreateDate+=\"'+deltaDateTime+'\"'
-                        exiftoolOrigDatePar='-DateTimeOriginal+=\"'+deltaDateTime+'\"'
+                        exiftoolModDatePar='-ModifyDate-=\"'+deltaDateTime+'\"'
+                        exiftoolCreateDatePar='-CreateDate-=\"'+deltaDateTime+'\"'
+                        exiftoolOrigDatePar='-DateTimeOriginal-=\"'+deltaDateTime+'\"'
                         logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
                         try:
                             et.execute(exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar,file.path)                            
