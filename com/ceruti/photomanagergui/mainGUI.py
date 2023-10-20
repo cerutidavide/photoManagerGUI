@@ -130,6 +130,15 @@ class PhotoManagerAppFrame(wx.Frame):
         self.globpropsHash['f_fixdate']['tot_files'] = []
         self.globpropsHash['f_fixdate']['tot_dirs'] = []
 
+        self.globpropsHash['f_checkmd5backup'] = dict()
+        self.globpropsHash['f_checkmd5backup']['matched'] = []
+        self.globpropsHash['f_checkmd5backup']['nomatch'] = []
+        self.globpropsHash['f_checkmd5backup']['tot_files'] = []
+        self.globpropsHash['f_checkmd5backup']['tot_dirs'] = []
+
+
+
+
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
 
         self.importDirFileExtensions = {}
@@ -178,9 +187,11 @@ class PhotoManagerAppFrame(wx.Frame):
         self.modoFixData = wx.RadioBox(self, label="Attraversare Sotto Cartelle Sì/No", majorDimension=2,
                                      pos=(360, 210), size=(345, -1),
                                      choices=["Sì", "No"])
+        self.avviaCheckMd5Backup = wx.Button(self, label="Avvia Check Md5 per folder selezionato", pos=(360, 280),size=(345,-1))
+        self.avviaCheckMd5Backup.Bind(wx.EVT_BUTTON, self.AvviaCheckMd5Backup)
 
 
-        self.esci = wx.Button(self, label="ESCI", pos=(360, 280), size=(345, -1))
+        self.esci = wx.Button(self, label="ESCI", pos=(360, 350), size=(345, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
         self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300),style=wx.TE_MULTILINE)
@@ -226,6 +237,53 @@ class PhotoManagerAppFrame(wx.Frame):
         self.Close()
         pass
 
+    def CheckMd5Backup(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):
+        if os.path.exists(dir):
+            id_log_counter_dir = str(len(self.globpropsHash['f_checkmd5backup']['tot_dirs']))
+            logger.info("<<<INIZIO CARTELLA %s >>>",dir)
+            self.globpropsHash['f_checkmd5backup']['tot_dirs'].append(dir)
+            dir_iterator=os.scandir(dir)
+            for file in dir_iterator:
+                if file.is_dir():
+                    logger.debug("DIRECTORY %s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,str(file.path))
+                    self.CheckMd5Backup(file,True)
+                else:
+                    id_log_counter = str(len(self.globpropsHash['f_checkmd5backup']['tot_files']))
+                    #qui devo fare il mestiere sul file
+                    logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter) + " <INIZIO> " + str(file.path))
+                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO APRO")
+                    self.globpropsHash['f_checkmd5backup']['tot_files'].append(file.path)
+                    with open(file, "rb") as fmd5:
+                        md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
+                        logger.debug("FILE %s %s  <md5 calcolato> %s <md5 nomefile> %s ",str(id_log_counter_dir),str(id_log_counter),md5filename,file.name)
+
+                        fmd5.close()
+                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO CHIUDO")
+            dir_iterator.close()
+            logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)
+    def AvviaCheckMd5Backup(self,evt):
+        self.CleanConfigFunction()
+        self.CheckMd5Backup(self.globpropsHash['workingfolder'],False)
+        self.gauge.SetValue(self.gauge.GetRange())
+        logger.info("Dictionary File Da trattare: ")
+        outputWindowText=''
+        outputWindowText+='<<<< FILE Match MD5: '+str(len(self.globpropsHash['f_checkmd5backup']['matched']))+' >>>>\n'
+        n=1
+        for f in self.globpropsHash['f_checkmd5backup']['matched']:
+            logger.info("matched file >>> %s ",f)
+            outputWindowText+=str(n)+'-->'+f+"\n"
+            n+=1
+        outputWindowText+='\n<<<< FILE NO MATCH: '+str(len(self.globpropsHash['f_checkmd5backup']['nomatch']))+' >>>>\n'
+        n=1
+        for s in self.globpropsHash['f_checkmd5backup']['nomatch']:
+            logger.info("no-matched file >>> %s ",s)
+            outputWindowText+=str(n)+'-->'+s+"\n"
+            n+=1
+        logger.debug("Numero di file Match: %s",len(self.globpropsHash['f_checkmd5backup']['matched']))
+        logger.debug("Numero di file NO-Match: %s",len(self.globpropsHash['f_checkmd5backup']['nomatch']))
+        self.outputWindow.SetValue(outputWindowText)
+        self.gauge.SetValue(0)
+        self.CleanConfigFunction()
 
     def AvviaFixDateTime(self, evt):        
         self.CleanConfigFunction()
@@ -272,9 +330,9 @@ class PhotoManagerAppFrame(wx.Frame):
                     with exiftool.ExifTool() as et:
                         #Al momento fisso a -7 ore
                         deltaDateTime='00:00:00 07:00:00'
-                        exiftoolModDatePar='-ModifyDate-=\"'+deltaDateTime+'\"'
-                        exiftoolCreateDatePar='-CreateDate-=\"'+deltaDateTime+'\"'
-                        exiftoolOrigDatePar='-DateTimeOriginal-=\"'+deltaDateTime+'\"'
+                        exiftoolModDatePar='-ModifyDate+=\"'+deltaDateTime+'\"'
+                        exiftoolCreateDatePar='-CreateDate+=\"'+deltaDateTime+'\"'
+                        exiftoolOrigDatePar='-DateTimeOriginal+=\"'+deltaDateTime+'\"'
                         logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
                         try:
                             et.execute(exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar,file.path)                            
@@ -348,7 +406,8 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(self.fileCounter['tot_files'])
         if os.path.exists(dir):
             logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
-            for file in os.scandir(dir):
+            dir_iterator=os.scandir(dir)
+            for file in dir_iterator:
                 id_log_counter = str(self.fileCounter['tot_files'])
                 if file.is_dir():                    
                     logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                    
@@ -372,6 +431,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     self.fileCounter['tot_files']+=1
                     self.gauge.SetValue(self.fileCounter['tot_files'])
+            dir_iterator.close()
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
     def AvviaCopiaFile(self, evt):
         self.CleanConfigFunction()
@@ -394,7 +454,8 @@ class PhotoManagerAppFrame(wx.Frame):
         id_log_counter_dir =len(self.globpropsHash['f_copia']['tot_dirs'])
         if os.path.exists(dir):
             logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<INIZIO CARTELLA>>>")
-            for file in os.scandir(dir):
+            dir_iterator=os.scandir(dir)
+            for file in dir_iterator:
                 id_log_counter_file =len(self.globpropsHash['f_copia']['tot_files'])
                 if file.is_dir():
                     self.globpropsHash['f_copia']['tot_dirs'].append(file.path)
@@ -495,6 +556,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(file.path))
                         self.globpropsHash['f_copia']['skipped'].append(file.path)
             logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
+            dir_iterator.close()
         else:
             self.importDirError = 1
             dlg = wx.MessageDialog(self, "Directory Import Inesistente", style=wx.ICON_ERROR,
