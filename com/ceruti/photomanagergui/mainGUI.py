@@ -283,7 +283,6 @@ class PhotoManagerAppFrame(wx.Frame):
                             logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout).replace('\n',''))
                             logger.debug("FILE %s_%s <STDERR CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stderr))
                             logger.debug("FILE %s_%s <RISULTATO CMD EXIFTOOL %s",id_log_counter_dir,id_log_counter,str(et.last_status))
-                            test='prova'
                             if et.last_status==0 and et.last_stdout.rfind('unchanged')<0 :
                                 logger.debug("FILE %s_%s <SRC: %s> <DST: %s>",id_log_counter_dir,id_log_counter,srcbckfullfilename,dstbckfullfilename)
                                 self.globpropsHash['f_fixdate']['fixed'].append(str(file.path))        
