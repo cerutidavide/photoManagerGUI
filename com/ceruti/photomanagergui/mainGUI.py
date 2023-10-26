@@ -261,12 +261,12 @@ class PhotoManagerAppFrame(wx.Frame):
                     self.CheckMd5Backup(file,True)
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_checkmd5backup']['tot_files']))
-                    logger.info("FILE %s_%s %s <INIZIO>",id_log_counter_dir,id_log_counter,file.path)
+                    logger.info("FILE %s_%s %s <Inizio",id_log_counter_dir,id_log_counter,file.path)
                     self.globpropsHash['f_checkmd5backup']['tot_files'].append(file.path)
                     try: 
                         fmd5=open(file, "rb")
                         logger.debug("FILE %s_%s %s <Aperto>",id_log_counter_dir,id_log_counter,file.path)
-                        calculated_md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()+pathlib.Path(file).suffix
+                        
                         
 
 
@@ -274,15 +274,18 @@ class PhotoManagerAppFrame(wx.Frame):
                         if match:
                             logger.debug("FILE %s_%s <md5 ricavato nome file> %s",id_log_counter_dir,id_log_counter,match[1])
                             read_md5filename=match[1]
+                            calculated_md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()+pathlib.Path(file).suffix.replace('_original','')
+
                         else:
                             logger.debug("FILE %s_%s <Il file  %s non presenta la struttura di un file di backup ",id_log_counter_dir,id_log_counter,file.name)
-                            read_md5filename=file.path
+                            calculated_md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()+pathlib.Path(file).suffix
+                            read_md5filename=file.name
 
 
                         #ah cazzo estensione non va bene (gli va tolto original ovunque)
 
 
-                        logger.debug("FILE %s %s  <file name con md5 calcolato> %s <file name preso dal nomefile> %s ",str(id_log_counter_dir),str(id_log_counter),calculated_md5filename+pathlib.Path(file).suffix,read_md5filename)
+                        logger.debug("FILE %s %s  <file name con md5 calcolato> %s <file name preso dal nomefile> %s ",str(id_log_counter_dir),str(id_log_counter),calculated_md5filename,read_md5filename)
                         if (calculated_md5filename==read_md5filename):
                             logger.debug("FILE %s %s  <MD5 MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)
                             logger.info("FILE %s %s  <FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.name) 
@@ -294,7 +297,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             #self.globpropsHash['f_checkmd5backup']['original-restored'].append(file.path)
                         else:
                             logger.debug("FILE %s %s  <MD5 NO MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)                                                        
-                            logger.info("FILE %s %s  <FILE CON METADATI MODIFICATI RISPETTO AL FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.name) 
+                            logger.info("FILE %s %s  <FILE CON METADATI MODIFICATI RISPETTO AL FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.path) 
                             #self.globpropsHash['f_checkmd5backup']['non-original-restored'].append(file.path)
 
                         #NON FUNZIONA!!!!! devi far sparire _original e timestamps se no non funziona mai
