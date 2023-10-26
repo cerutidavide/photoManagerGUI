@@ -20,11 +20,18 @@ from send2trash import send2trash
 
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
 # NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
-
-
+# >>> stringa='2023_10_20_10_56_34.368481_2023_10_20_10_53_56.900199_2023_10_20_10_52_44.222646_2023_10_19_16_43_01.178484_0a6157af3a585ba3add55c451ff2123c(1).jpg'          
+# >>> match=re.search('.*_(.*)\.',stringa)
+# >>> print(match[1])
+# 0a6157af3a585ba3add55c451ff2123c(1)
+# >>> match=re.search('.*_(.*)\.(.*)',stringa) 
+# >>> print(match[1])
+# 0a6157af3a585ba3add55c451ff2123c(1)
+# >>> print(match[2]) 
+# jpg
 
 # TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
-# 1. impostazione/fix data per foto "sbagliate" --> da fare correggere conteggio nb controllare quali sono i campi effettivi in cui si salvano le date corrette (verificare tag exif e anche tag file e check cosa vede il sistema operativo)
+#   1. Restore della cartella backup da un'altra parte (Work-area?)
 # TODO FORMATTAZIONE LOG
 # TODO gestione immagini non riconosciute con Exitool
 # TODO valutare "con e senza exif tool"
@@ -65,14 +72,14 @@ def loadFileExtensionList(self, filepath="/tmp/", extensionList=[], firstcall=Tr
     return extensionList
 
 
-def CheckAndLoadProperties(workingdir='c:\\Utenti\\Davide\\photoManagerGUI',
+def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
     myHashGlob['fileconfprincipale'] = filenameGlob
-    logger.debug("<<Parametro impostato #file_di_configurazione_principale# " + os.path.join(workingdir, filenameGlob))
+    logger.debug("<<Parametro impostato #file_di_configurazione_principale# " + os.path.join(basePath, filenameGlob))
     myHashGlob['masterrepositoryconf'] = filenameMstr
     logger.debug("<<Parametro impostato #masterrepositoryconf# " + filenameMstr)
-    with open(os.path.join(workingdir, filenameGlob), encoding="utf-8") as f:
+    with open(os.path.join(basePath, filenameGlob), encoding="utf-8") as f:
         for line in f.readlines():
             # print(line)
             match = re.search('^masterrepository=(.*)', line)
@@ -80,18 +87,42 @@ def CheckAndLoadProperties(workingdir='c:\\Utenti\\Davide\\photoManagerGUI',
             if match:
                 myHashGlob['masterrepository'] = match[1]
                 logger.debug("<<Parametro letto nel file #masterrepository# " + str(match[1]))
-            match = re.search('^workingfolder=(.*)', line)
+            match = re.search('^selectedfolder=(.*)', line)
             if match:
-                myHashGlob['workingfolder'] = match[1]
-                logger.debug("<<Parametro letto nel file #workingfolder# " + str(match[1]))
-            match = re.search('^importfilelist=(.*)', line)
-            if match:
-                myHashGlob['importfilelist'] = match[1]
-                logger.debug("<<Parametro letto nel file #importfilelist# " + str(match[1]) + "\n")
-            match = re.search('^masterrepository_bin=(.*)', line)
-            if match:
-                myHashGlob['masterrepository_bin'] = match[1]
-                logger.debug("<<Parametro letto nel file #masterrepository_bin# " + str(match[1]) + "\n")
+                myHashGlob['selectedfolder'] = match[1]
+                logger.debug("<<Parametro letto nel file #selectedfolder# " + str(match[1]))                        
+            myHashGlob['masterrepository_bin'] = myHashGlob['masterrepository']+"\\recycled-bin"
+            myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository']+"\\backup"
+            myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository']+"\\work-area"
+            myHashGlob['f_copia'] = dict()
+            myHashGlob['f_copia']['copied'] = []
+            myHashGlob['f_copia']['skipped'] = []
+            myHashGlob['f_copia']['tot_files'] = []
+            myHashGlob['f_copia']['tot_dirs'] = []
+            
+            myHashGlob['f_listaestensioni'] = dict()
+            
+            myHashGlob['f_checkarchivio'] = dict()
+
+            myHashGlob['f_fixdate'] = dict()
+            myHashGlob['f_fixdate']['fixed'] = []
+            myHashGlob['f_fixdate']['skipped'] = []
+            myHashGlob['f_fixdate']['tot_files'] = []
+            myHashGlob['f_fixdate']['tot_dirs'] = []
+
+            myHashGlob['f_checkmd5backup'] = dict()
+            myHashGlob['f_checkmd5backup']['matched'] = []
+            myHashGlob['f_checkmd5backup']['nomatch'] = []
+            myHashGlob['f_checkmd5backup']['tot_files'] = []
+            myHashGlob['f_checkmd5backup']['tot_dirs'] = []
+            myHashGlob['f_checkmd5backup']['error_files']=[]
+
+            myHashGlob['f_restore'] = dict()
+            myHashGlob['f_restore']['restored'] = []
+            myHashGlob['f_restore']['skipped'] = []
+            myHashGlob['f_restore']['tot_files'] = []
+            myHashGlob['f_restore']['tot_dirs'] = []
+            myHashGlob['f_restore']['reading_error_files'] = []
 
     return myHashGlob
 
@@ -109,34 +140,13 @@ class PhotoManagerAppFrame(wx.Frame):
             self.basePath="C:\\Users\\Davide\\PhotoManager"
         self.baseFile = "default.props"
         logger.info("###PARAMETRO FILE BASE### " + self.basePath + "\\" + self.baseFile + "\n")
-        logger.info("###MODIFICARE basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
-        logger.info("###MODIFICARE basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
-        self.globpropsHash = CheckAndLoadProperties(self.basePath, self.baseFile, ".masterrepository.conf")
-
-        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
-        self.globpropsHash['f_copia'] = dict()
-        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
-        self.globpropsHash['f_checkarchivio'] = dict()
-        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
-        self.globpropsHash['f_listaestensioni'] = dict()
-        self.globpropsHash['f_copia']['copied'] = []
-        self.globpropsHash['f_copia']['skipped'] = []
-        self.globpropsHash['f_copia']['tot_files'] = []
-        self.globpropsHash['f_copia']['tot_dirs'] = []
+        logger.info("###basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
+        logger.info("###basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
         
-        self.globpropsHash['f_fixdate'] = dict()
-        self.globpropsHash['f_fixdate']['fixed'] = []
-        self.globpropsHash['f_fixdate']['skipped'] = []
-        self.globpropsHash['f_fixdate']['tot_files'] = []
-        self.globpropsHash['f_fixdate']['tot_dirs'] = []
+        self.globpropsHash = LoadPropertiesAndInitArchive(self.basePath, self.baseFile, ".masterrepository.conf")
+        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
 
-        self.globpropsHash['f_checkmd5backup'] = dict()
-        self.globpropsHash['f_checkmd5backup']['matched'] = []
-        self.globpropsHash['f_checkmd5backup']['nomatch'] = []
-        self.globpropsHash['f_checkmd5backup']['tot_files'] = []
-        self.globpropsHash['f_checkmd5backup']['tot_dirs'] = []
-
-
+        
 
 
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
@@ -155,13 +165,13 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
 
         self.workingDirList = wx.GenericDirCtrl(self, pos=(5, 30), size=(345, 230), style=wx.DIRCTRL_DIR_ONLY)
-        if 'workingfolder' not in self.globpropsHash.keys():
+        if 'selectedfolder' not in self.globpropsHash.keys():
             self.workingDirList.SetPath("c:\\temp")
             self.workingDirList.SelectPath("c:\\temp", select=True)
-            self.globpropsHash['workingfolder']="C:\\temp"
+            self.globpropsHash['selectedfolder']="C:\\temp"
         else:
-            self.workingDirList.SetPath(self.globpropsHash['workingfolder'])
-            self.workingDirList.SelectPath(self.globpropsHash['workingfolder'], select=True)
+            self.workingDirList.SetPath(self.globpropsHash['selectedfolder'])
+            self.workingDirList.SelectPath(self.globpropsHash['selectedfolder'], select=True)
         self.workingDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaWorkingDir)
 
 
@@ -176,7 +186,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
         self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 90),size=(345,-1))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
-        self.modoCopia = wx.RadioBox(self, label="Azione Su File Da Importare:", majorDimension=3,
+        self.modoCopia = wx.RadioBox(self, label="Azione Su File IMPORTATI/SKIPPATI:", majorDimension=3,
                                      pos=(360, 120), size=(345, -1),
                                      choices=["nessuna azione", "cestino archivio", "cestino windows"])
         self.avviaCheckArchivio = wx.Button(self, label="Avvia Controllo Duplicati Cartella Selezionata", pos=(360, 55),size=(345,-1))
@@ -202,16 +212,18 @@ class PhotoManagerAppFrame(wx.Frame):
         self.SetFocus()
         self.Center()
         self.Show(True)
+   
     def CleanConfigFunction(self):
-        #potrei spianare tutti i dict le cui chiavi iniziano per f_
-        self.globpropsHash['f_copia']['tot_dirs'].clear()
-        self.globpropsHash['f_copia']['tot_files'].clear()
-        self.globpropsHash['f_copia']['skipped'].clear()
-        self.globpropsHash['f_copia']['copied'].clear()
-        self.globpropsHash['f_fixdate']['fixed'].clear()
-        self.globpropsHash['f_fixdate']['skipped'].clear()
-        self.globpropsHash['f_fixdate']['tot_files'].clear()
-        self.globpropsHash['f_fixdate']['tot_dirs'].clear()
+        for k in self.globpropsHash.keys():
+            logger.info('CHIAVE: %s',str(k))
+            if str(k).startswith('f_'):
+                for c in self.globpropsHash[k].keys():
+                    logger.debug('DICT DA SVUOTARE [%s][%s]',str(k),str(c))
+                    logger.debug('VALORE DICT DA SVUOTARE %s',str(self.globpropsHash[k][c]))
+                    self.globpropsHash[k][c].clear()
+            
+
+
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
     def stringFormattedHash(self):
         result = ""
@@ -220,12 +232,12 @@ class PhotoManagerAppFrame(wx.Frame):
         return result
     def SelezionaWorkingDir(self,evt):        
         if self.workingDirList.GetPath():
-            self.globpropsHash['workingfolder'] = self.workingDirList.GetPath()
+            self.globpropsHash['selectedfolder'] = self.workingDirList.GetPath()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
     def AvviaCaricaEstensioni(self, evt):
-        logger.debug("**********  %s ",self.globpropsHash['workingfolder'])
-        messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['workingfolder'], True))
-        messaggioFolderImport =self.globpropsHash['workingfolder']
+        logger.debug("**********  %s ",self.globpropsHash['selectedfolder'])
+        messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['selectedfolder'], True))
+        messaggioFolderImport =self.globpropsHash['selectedfolder']
         self.gauge.SetValue(self.gauge.GetRange())
         self.messageExtension = wx.MessageBox(
             "Nel folder import " + messaggioFolderImport + "\nci sono i seguenti tipi di file: \n" + messaggioEstensioni,
@@ -249,21 +261,68 @@ class PhotoManagerAppFrame(wx.Frame):
                     self.CheckMd5Backup(file,True)
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_checkmd5backup']['tot_files']))
-                    #qui devo fare il mestiere sul file
-                    logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter) + " <INIZIO> " + str(file.path))
-                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO APRO")
+                    logger.info("FILE %s_%s %s <INIZIO>",id_log_counter_dir,id_log_counter,file.path)
                     self.globpropsHash['f_checkmd5backup']['tot_files'].append(file.path)
-                    with open(file, "rb") as fmd5:
-                        md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
-                        logger.debug("FILE %s %s  <md5 calcolato> %s <md5 nomefile> %s ",str(id_log_counter_dir),str(id_log_counter),md5filename,file.name)
+                    try: 
+                        fmd5=open(file, "rb")
+                        logger.debug("FILE %s_%s %s <Aperto>",id_log_counter_dir,id_log_counter,file.path)
+                        calculated_md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()+pathlib.Path(file).suffix
+                        
 
+
+                        match=re.search('.*_(.*)\.',str(file.name))
+                        if match:
+                            logger.debug("FILE %s_%s <md5 ricavato nome file> %s",id_log_counter_dir,id_log_counter,match[1])
+                            read_md5filename=match[1]
+                        else:
+                            logger.debug("FILE %s_%s <Il file  %s non presenta la struttura di un file di backup ",id_log_counter_dir,id_log_counter,file.name)
+                            read_md5filename=file.path
+
+
+                        #ah cazzo estensione non va bene (gli va tolto original ovunque)
+
+
+                        logger.debug("FILE %s %s  <file name con md5 calcolato> %s <file name preso dal nomefile> %s ",str(id_log_counter_dir),str(id_log_counter),calculated_md5filename+pathlib.Path(file).suffix,read_md5filename)
+                        if (calculated_md5filename==read_md5filename):
+                            logger.debug("FILE %s %s  <MD5 MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)
+                            logger.info("FILE %s %s  <FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.name) 
+                            
+                            
+                            
+                            
+                            
+                            #self.globpropsHash['f_checkmd5backup']['original-restored'].append(file.path)
+                        else:
+                            logger.debug("FILE %s %s  <MD5 NO MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)                                                        
+                            logger.info("FILE %s %s  <FILE CON METADATI MODIFICATI RISPETTO AL FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.name) 
+                            #self.globpropsHash['f_checkmd5backup']['non-original-restored'].append(file.path)
+
+                        #NON FUNZIONA!!!!! devi far sparire _original e timestamps se no non funziona mai
+
+                        #QUI
+                        # >>> stringa='2023_10_20_10_56_34.368481_2023_10_20_10_53_56.900199_2023_10_20_10_52_44.222646_2023_10_19_16_43_01.178484_0a6157af3a585ba3add55c451ff2123c(1).jpg'          
+# >>> match=re.search('.*_(.*)\.',stringa)
+# >>> print(match[1])
+# 0a6157af3a585ba3add55c451ff2123c(1)
+# >>> match=re.search('.*_(.*)\.(.*)',stringa) 
+# >>> print(match[1])
+# 0a6157af3a585ba3add55c451ff2123c(1)
+# >>> print(match[2]) 
+
+                     
+                     
+                     
+                        # logger.debug("FILE %s_%s <file da cui estrarre md5> %s",id_log_counter_dir,id_log_counter,file.name)
                         fmd5.close()
                         logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO CHIUDO")
+                    except FileNotFoundError as e:
+                        logger.error("<<ERRORE APERTURA FILE: %s ",file.path)                                                    
+                        self.globpropsHash['f_checkmd5backup']['reading_error_files'].append(file.path)
             dir_iterator.close()
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)
     def AvviaCheckMd5Backup(self,evt):
         self.CleanConfigFunction()
-        self.CheckMd5Backup(self.globpropsHash['workingfolder'],False)
+        self.CheckMd5Backup(self.globpropsHash['selectedfolder'],False)
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Da trattare: ")
         outputWindowText=''
@@ -285,9 +344,15 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
 
+
+
+    def AvviaRestore(self,evt):
+        self.CleanConfigFunction()
+
+
     def AvviaFixDateTime(self, evt):        
         self.CleanConfigFunction()
-        self.FixDateTime(self.globpropsHash['workingfolder'],False)
+        self.FixDateTime(self.globpropsHash['selectedfolder'],False)
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Da trattare: ")
         outputWindowText=''
@@ -306,11 +371,12 @@ class PhotoManagerAppFrame(wx.Frame):
         logger.debug("Numero di file aggiornati: %s",len(self.globpropsHash['f_fixdate']['fixed']))
         logger.debug("Numero di file saltati: %s",len(self.globpropsHash['f_fixdate']['skipped']))
         self.outputWindow.SetValue(outputWindowText)
-#        okCheck = wx.MessageDialog(self, "File aggiornati: "+str(len(self.globpropsHash['f_fixdate']['fixed']))+" su un totale di "+str(len(self.globpropsHash['f_fixdate']['tot_files']))+"\nFile saltati: "+str(len(self.globpropsHash['f_fixdate']['skipped']))+"\nCartelle percorse: "+str(len(self.globpropsHash['f_fixdate']['tot_dirs'])), style=wx.ICON_INFORMATION, caption="Check Terminato")
-#        okCheck.ShowModal()
+        okCheck = wx.MessageDialog(self, "File aggiornati: "+str(len(self.globpropsHash['f_fixdate']['fixed']))+" su un totale di "+str(len(self.globpropsHash['f_fixdate']['tot_files']))+"\nFile saltati: "+str(len(self.globpropsHash['f_fixdate']['skipped']))+"\nCartelle percorse: "+str(len(self.globpropsHash['f_fixdate']['tot_dirs'])), style=wx.ICON_INFORMATION, caption="Check Terminato")
+        okCheck.ShowModal()
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
     def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):        
+        #check self.AvviaCheckArchivio(self,wx.EVT_BUTTON)
         self.fixmode=self.modoFixData.GetSelection()
         if os.path.exists(dir):
             id_log_counter_dir = str(len(self.globpropsHash['f_fixdate']['tot_dirs']))
@@ -378,7 +444,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.duplicatedFilesDict.clear()
         self.Errors = 0
         tot_files=0
-        self.CheckArchivio(self.globpropsHash['workingfolder'])                
+        self.CheckArchivio(self.globpropsHash['selectedfolder'])                
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Trovati: ")
         found_duplicate = False
@@ -437,7 +503,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.CleanConfigFunction()
         logger.debug("###PARAMETRI DI CONFIGURAZIONE PRIMA DELL INIZIO COPIA###  \n" + str(self.globpropsHash))
         self.importDirError = 0
-        self.CopiaFile(self.globpropsHash['workingfolder'])
+        self.CopiaFile(self.globpropsHash['selectedfolder'])
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
         if self.importDirError == 0:
@@ -507,8 +573,6 @@ class PhotoManagerAppFrame(wx.Frame):
                     dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
                     dstfile = dstfolder + "\\" + md5filename + dstext
                     logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Destinazione individuata:> " + dstfile)
-                    self.globpropsHash['masterrepository_bin'] = self.globpropsHash[
-                                                                     'masterrepository'] + "\\cestino"
                     self.copymode = self.modoCopia.GetSelection()
                     logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <CopyMode:> " + str(self.copymode))
                     if not os.path.exists(self.globpropsHash['masterrepository_bin']):
