@@ -86,14 +86,15 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             # print(match)
             if match:
                 myHashGlob['masterrepository'] = match[1]
-                logger.debug("<<Parametro letto nel file #masterrepository# " + str(match[1]))
+                logger.debug("<<Parametro letto nel file #masterrepository# %s",str(match[1]))
             match = re.search('^selectedfolder=(.*)', line)
             if match:
                 myHashGlob['selectedfolder'] = match[1]
                 logger.debug("<<Parametro letto nel file #selectedfolder# " + str(match[1]))                        
             myHashGlob['masterrepository_bin'] = myHashGlob['masterrepository']+"\\recycled-bin"
             myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository']+"\\backup"
-            myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository']+"\\work-area"
+            myHashGlob['masterrepository_work'] = myHashGlob['masterrepository']+"\\work-area"
+            myHashGlob['masterrepository_restore'] = myHashGlob['masterrepository']+"\\restoredfiles"
             myHashGlob['f_copia'] = dict()
             myHashGlob['f_copia']['copied'] = []
             myHashGlob['f_copia']['skipped'] = []
@@ -117,12 +118,20 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_checkmd5backup']['tot_dirs'] = []
             myHashGlob['f_checkmd5backup']['error_files']=[]
 
+            
+            myHashGlob['f_checkmd5backup']['original-restored'] = []
+            myHashGlob['f_checkmd5backup']['non-original-restored'] = []
+            myHashGlob['f_checkmd5backup']['reading_error_files'] =[]           
             myHashGlob['f_restore'] = dict()
-            myHashGlob['f_restore']['restored'] = []
             myHashGlob['f_restore']['skipped'] = []
             myHashGlob['f_restore']['tot_files'] = []
             myHashGlob['f_restore']['tot_dirs'] = []
             myHashGlob['f_restore']['reading_error_files'] = []
+            myHashGlob['f_restore']['dstfolder'] = []            
+            myHashGlob['f_restore']['dstfolder'] = ['']
+
+
+            
 
     return myHashGlob
 
@@ -221,7 +230,8 @@ class PhotoManagerAppFrame(wx.Frame):
                     logger.debug('DICT DA SVUOTARE [%s][%s]',str(k),str(c))
                     logger.debug('VALORE DICT DA SVUOTARE %s',str(self.globpropsHash[k][c]))
                     self.globpropsHash[k][c].clear()
-            
+    def fileTS(self):
+        return str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'            
 
 
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
@@ -282,40 +292,46 @@ class PhotoManagerAppFrame(wx.Frame):
                             read_md5filename=file.name
 
 
-                        #ah cazzo estensione non va bene (gli va tolto original ovunque)
-
-
+                        dstfolder=self.globpropsHash['masterrepository_restore'] +'\\'+self.globpropsHash['f_restore']['dstfolder'][0]
+                        dstfolder_original=dstfolder+'\\originals\\'
+                        dstfolder_non_original=dstfolder+'\\non_originals\\'
+                        logger.debug("FOLDER Destinazione RESTORE %s ",dstfolder)
+                        if os.path.exists(dstfolder):
+                            pass
+                        else:
+                            os.makedirs(dstfolder)
+                            logger.debug("FOLDER Destinazione RESTORE %s CREATA ",dstfolder)
+                        if os.path.exists(dstfolder_original):
+                            pass
+                        else:
+                            os.makedirs(dstfolder_original)
+                            logger.debug("FOLDER Destinazione RESTORE %s CREATA ",dstfolder_original)
+                        if os.path.exists(dstfolder_non_original):
+                            pass
+                        else:
+                            os.makedirs(dstfolder_non_original)
+                            logger.debug("FOLDER Destinazione RESTORE %s CREATA ",dstfolder_non_original)                                                        
                         logger.debug("FILE %s %s  <file name con md5 calcolato> %s <file name preso dal nomefile> %s ",str(id_log_counter_dir),str(id_log_counter),calculated_md5filename,read_md5filename)
                         if (calculated_md5filename==read_md5filename):
                             logger.debug("FILE %s %s  <MD5 MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)
                             logger.info("FILE %s %s  <FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.name) 
-                            
-                            
-                            
-                            
-                            
-                            #self.globpropsHash['f_checkmd5backup']['original-restored'].append(file.path)
+                            dstfile=dstfolder_original+calculated_md5filename
+                            try:
+                                shutil.copy2(file,dstfile)
+                                self.globpropsHash['f_checkmd5backup']['original-restored'].append(file.path)
+                            except IOError:
+                                logger.error("FILE %s %s  <Problemi nell'estrazione del file %s ",str(id_log_counter_dir),str(id_log_counter),file.path) 
                         else:
+                            dstfile=dstfolder_non_original+calculated_md5filename
+                            try:
+                                shutil.copy2(file,dstfile)
+                                self.globpropsHash['f_checkmd5backup']['non-original-restored'].append(file.path)
+                            except IOError:
+                                logger.error("FILE %s %s  <Problemi nella copia del file %s ",str(id_log_counter_dir),str(id_log_counter),file.path)                             
                             logger.debug("FILE %s %s  <MD5 NO MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)                                                        
                             logger.info("FILE %s %s  <FILE CON METADATI MODIFICATI RISPETTO AL FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.path) 
-                            #self.globpropsHash['f_checkmd5backup']['non-original-restored'].append(file.path)
-
-                        #NON FUNZIONA!!!!! devi far sparire _original e timestamps se no non funziona mai
-
-                        #QUI
-                        # >>> stringa='2023_10_20_10_56_34.368481_2023_10_20_10_53_56.900199_2023_10_20_10_52_44.222646_2023_10_19_16_43_01.178484_0a6157af3a585ba3add55c451ff2123c(1).jpg'          
-# >>> match=re.search('.*_(.*)\.',stringa)
-# >>> print(match[1])
-# 0a6157af3a585ba3add55c451ff2123c(1)
-# >>> match=re.search('.*_(.*)\.(.*)',stringa) 
-# >>> print(match[1])
-# 0a6157af3a585ba3add55c451ff2123c(1)
-# >>> print(match[2]) 
-
-                     
-                     
-                     
-                        # logger.debug("FILE %s_%s <file da cui estrarre md5> %s",id_log_counter_dir,id_log_counter,file.name)
+                            
+                            
                         fmd5.close()
                         logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter)+" <è un file...> " + str(file.path)+" LO CHIUDO")
                     except FileNotFoundError as e:
@@ -325,6 +341,7 @@ class PhotoManagerAppFrame(wx.Frame):
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)
     def AvviaCheckMd5Backup(self,evt):
         self.CleanConfigFunction()
+        self.globpropsHash['f_restore']['dstfolder'] = [self.fileTS()]    
         self.CheckMd5Backup(self.globpropsHash['selectedfolder'],False)
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Da trattare: ")
@@ -345,11 +362,6 @@ class PhotoManagerAppFrame(wx.Frame):
         logger.debug("Numero di file NO-Match: %s",len(self.globpropsHash['f_checkmd5backup']['nomatch']))
         self.outputWindow.SetValue(outputWindowText)
         self.gauge.SetValue(0)
-        self.CleanConfigFunction()
-
-
-
-    def AvviaRestore(self,evt):
         self.CleanConfigFunction()
 
 
