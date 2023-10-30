@@ -30,8 +30,14 @@ from send2trash import send2trash
 # >>> print(match[2]) 
 # jpg
 
+# ATTENZIONE se recycled_bin è incluso nel folder che sto processando con fixdate--LOOP INFINITO
+# ATTENZIONE se restored è incluso nel backup stesso problema
+# IMPOSTARE folder validi restore e backup ?
+
 # TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
 #   1. Restore della cartella backup da un'altra parte (Work-area?)
+# TODO CONTARE ERRORI COPIA (TOTALE ATTUALMENTE NON MATCH)
+# TODO NOTA BENE: _original troppe volte rende i file inaccessibili
 # TODO FORMATTAZIONE LOG
 # TODO gestione immagini non riconosciute con Exitool
 # TODO valutare "con e senza exif tool"
@@ -121,7 +127,11 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             
             myHashGlob['f_checkmd5backup']['original-restored'] = []
             myHashGlob['f_checkmd5backup']['non-original-restored'] = []
-            myHashGlob['f_checkmd5backup']['reading_error_files'] =[]           
+            myHashGlob['f_checkmd5backup']['reading_error_files'] =[]          
+            myHashGlob['f_checkmd5backup']['non-original-duplicated']=[]   
+            myHashGlob['f_checkmd5backup']['non-original-copyerrors']=[]
+            myHashGlob['f_checkmd5backup']['original-duplicated']=[]   
+            myHashGlob['f_checkmd5backup']['original-copyerrors']=[]
             myHashGlob['f_restore'] = dict()
             myHashGlob['f_restore']['skipped'] = []
             myHashGlob['f_restore']['tot_files'] = []
@@ -227,8 +237,7 @@ class PhotoManagerAppFrame(wx.Frame):
             logger.info('CHIAVE: %s',str(k))
             if str(k).startswith('f_'):
                 for c in self.globpropsHash[k].keys():
-                    logger.debug('DICT DA SVUOTARE [%s][%s]',str(k),str(c))
-                    logger.debug('VALORE DICT DA SVUOTARE %s',str(self.globpropsHash[k][c]))
+                    logger.debug('DICT DA SVUOTARE [%s][%s] VALORE DICT DA SVUOTARE %s',str(k),str(c),str(self.globpropsHash[k][c]))
                     self.globpropsHash[k][c].clear()
     def fileTS(self):
         return str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'            
@@ -283,7 +292,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         match=re.search('.*_(.*)\.',str(file.name))
                         if match:
                             logger.debug("FILE %s_%s <md5 ricavato nome file> %s",id_log_counter_dir,id_log_counter,match[1])
-                            read_md5filename=match[1]
+                            read_md5filename=match[1]+pathlib.Path(file).suffix.replace('_original','')
                             calculated_md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()+pathlib.Path(file).suffix.replace('_original','')
 
                         else:
@@ -317,17 +326,25 @@ class PhotoManagerAppFrame(wx.Frame):
                             logger.info("FILE %s %s  <FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.name) 
                             dstfile=dstfolder_original+calculated_md5filename
                             try:
-                                shutil.copy2(file,dstfile)
-                                self.globpropsHash['f_checkmd5backup']['original-restored'].append(file.path)
+                                if not(os.path.exists(dstfile)):
+                                    shutil.copy2(file,dstfile)
+                                    self.globpropsHash['f_checkmd5backup']['original-restored'].append(file.path)
+                                else:    
+                                    self.globpropsHash['f_checkmd5backup']['original-duplicated'].append(file.path)
                             except IOError:
                                 logger.error("FILE %s %s  <Problemi nell'estrazione del file %s ",str(id_log_counter_dir),str(id_log_counter),file.path) 
+                                self.globpropsHash['f_checkmd5backup']['original-copyerrors'].append(file.path)
                         else:
                             dstfile=dstfolder_non_original+calculated_md5filename
                             try:
-                                shutil.copy2(file,dstfile)
-                                self.globpropsHash['f_checkmd5backup']['non-original-restored'].append(file.path)
+                                if not(os.path.exists(dstfile)):
+                                    shutil.copy2(file,dstfile)
+                                    self.globpropsHash['f_checkmd5backup']['non-original-restored'].append(file.path)
+                                else:
+                                    self.globpropsHash['f_checkmd5backup']['non-original-duplicated'].append(file.path)
                             except IOError:
                                 logger.error("FILE %s %s  <Problemi nella copia del file %s ",str(id_log_counter_dir),str(id_log_counter),file.path)                             
+                                self.globpropsHash['f_checkmd5backup']['non-original-copyerrors'].append(file.path)
                             logger.debug("FILE %s %s  <MD5 NO MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)                                                        
                             logger.info("FILE %s %s  <FILE CON METADATI MODIFICATI RISPETTO AL FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.path) 
                             
@@ -547,63 +564,79 @@ class PhotoManagerAppFrame(wx.Frame):
                     logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter_file) + " <INIZIO> " + str(file.path))
                     logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <è un file...> " + str(file.path)+" LO APRO")
                     self.globpropsHash['f_copia']['tot_files'].append(file.path)
-                    with open(file, "rb") as fmd5:
-                        md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
-                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <md5 calcolato> " + md5filename)
-                        fmd5.close()
-                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <è un file...> " + str(file.path)+" LO CHIUDO")
-                    srcfile = os.fsdecode(file)
-                    dstroot = self.globpropsHash['masterrepository']
-                    dstcamerafolder = "ProduttoreNonNoto\\ModelloNonNoto"
-                    dstmaker = 'ProduttoreNonNoto'
-                    dstmodel = 'ModelloNonNoto'
-                    dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
-                    dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
-                    dstext = os.path.splitext(file)[1].lower()
                     try:
-                        with Image.open(pathlib.Path(file)) as image:
-                            info = image.getexif()
-                            if info:
-                                logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <ha EXIF TAGS>")
-                                for (tag, value) in info.items():
-                                    decoded = TAGS.get(tag, tag)
-                                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <EXIF_TAG:> " + str(tag) + " DECODED_TAG " + str(
-                                        TAGS.get(tag, tag)) + " TAG_VALUE: " + str(info[tag]))
-                                    if decoded == 'DateTime':
-                                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Anno/Mese da DataFile:> " + dstyearfolder + "/" + dstmonthfolder)
-                                        dstyearfolder = time.strftime("%Y",time.strptime(value,"%Y:%m:%d %H:%M:%S"))
-                                        dstmonthfolder = time.strftime("%m", time.strptime(value,"%Y:%m:%d %H:%M:%S"))
-                                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Anno/Mese da ExifFile:> " + dstyearfolder + "/" + dstmonthfolder)
-                                    if decoded == 'Make' and value != '':
-                                        dstmaker = value.strip().replace(' ', '')
-                                        dstcamerafolder = dstmaker
-                                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <PRODUTTORE:> " + dstmaker)
-                                    if decoded == 'Model' and value != '':
-                                        dstmodel = value.strip().replace(' ', '-')
-                                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <MODELLO:> " + dstmodel)
-                                dstcamerafolder = dstmaker + "\\" + dstmodel
-                                logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <FOTOCAMERA:> " + dstcamerafolder)
-                    except UnidentifiedImageError:
-                        logger.error("Immagine Non identificata")
-                    dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
-                    dstfile = dstfolder + "\\" + md5filename + dstext
-                    logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Destinazione individuata:> " + dstfile)
-                    self.copymode = self.modoCopia.GetSelection()
-                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <CopyMode:> " + str(self.copymode))
-                    if not os.path.exists(self.globpropsHash['masterrepository_bin']):
-                        os.makedirs(self.globpropsHash['masterrepository_bin'])
-                        logger.debug("FOLDER_CESTINO_ARCHIVIO:" + self.globpropsHash['masterrepository_bin'])
-                    if not os.path.exists(dstfolder):
-                        os.makedirs(dstfolder)
-                    if not os.path.exists(dstfile):
-                        logger.debug("File: " + dstfile + " Non Esiste, lo copio")
+                        with open(file, "rb") as fmd5:
+                            md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
+                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <md5 calcolato> " + md5filename)
+                            fmd5.close()
+                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <è un file...> " + str(file.path)+" LO CHIUDO")
+                        srcfile = os.fsdecode(file)
+                        dstroot = self.globpropsHash['masterrepository']
+                        dstcamerafolder = "ProduttoreNonNoto\\ModelloNonNoto"
+                        dstmaker = 'ProduttoreNonNoto'
+                        dstmodel = 'ModelloNonNoto'
+                        dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
+                        dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
+                        dstext = os.path.splitext(file)[1].lower()
                         try:
-                            shutil.copy2(srcfile, dstfile, follow_symlinks=False)
-                            logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <<COPIATO File:> " + srcfile + " su " + dstfile)
-                            logger.info(
-                                "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(
-                                    file.path))
-                            self.globpropsHash['f_copia']['copied'].append(file.path)
+                            with Image.open(pathlib.Path(file)) as image:
+                                info = image.getexif()
+                                if info:
+                                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <ha EXIF TAGS>")
+                                    for (tag, value) in info.items():
+                                        decoded = TAGS.get(tag, tag)
+                                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <EXIF_TAG:> " + str(tag) + " DECODED_TAG " + str(
+                                            TAGS.get(tag, tag)) + " TAG_VALUE: " + str(info[tag]))
+                                        if decoded == 'DateTime':
+                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Anno/Mese da DataFile:> " + dstyearfolder + "/" + dstmonthfolder)
+                                            dstyearfolder = time.strftime("%Y",time.strptime(value,"%Y:%m:%d %H:%M:%S"))
+                                            dstmonthfolder = time.strftime("%m", time.strptime(value,"%Y:%m:%d %H:%M:%S"))
+                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Anno/Mese da ExifFile:> " + dstyearfolder + "/" + dstmonthfolder)
+                                        if decoded == 'Make' and value != '':
+                                            dstmaker = value.strip().replace(' ', '')
+                                            dstcamerafolder = dstmaker
+                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <PRODUTTORE:> " + dstmaker)
+                                        if decoded == 'Model' and value != '':
+                                            dstmodel = value.strip().replace(' ', '-')
+                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <MODELLO:> " + dstmodel)
+                                    dstcamerafolder = dstmaker + "\\" + dstmodel
+                                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <FOTOCAMERA:> " + dstcamerafolder)
+                        except UnidentifiedImageError:
+                            logger.error("Immagine Non identificata")
+                        dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
+                        dstfile = dstfolder + "\\" + md5filename + dstext
+                        logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Destinazione individuata:> " + dstfile)
+                        self.copymode = self.modoCopia.GetSelection()
+                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <CopyMode:> " + str(self.copymode))
+                        if not os.path.exists(self.globpropsHash['masterrepository_bin']):
+                            os.makedirs(self.globpropsHash['masterrepository_bin'])
+                            logger.debug("FOLDER_CESTINO_ARCHIVIO:" + self.globpropsHash['masterrepository_bin'])
+                        if not os.path.exists(dstfolder):
+                            os.makedirs(dstfolder)
+                        if not os.path.exists(dstfile):
+                            logger.debug("File: " + dstfile + " Non Esiste, lo copio")
+                            try:
+                                shutil.copy2(srcfile, dstfile, follow_symlinks=False)
+                                logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <<COPIATO File:> " + srcfile + " su " + dstfile)
+                                logger.info(
+                                    "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(
+                                        file.path))
+                                self.globpropsHash['f_copia']['copied'].append(file.path)
+                                if self.copymode == 1:
+                                    try:
+                                        shutil.move(srcfile, self.globpropsHash['masterrepository_bin'],
+                                                    copy_function='copy2')
+                                    except IOError as e:
+                                        logger.error("<<ERRORE SPOSTAMENTO FILE:>>File: " + srcfile + " su " + dstfile)
+                                if self.copymode == 2:
+                                    try:
+                                        send2trash(srcfile)
+                                    except IOError as e:
+                                        logger.error("<<ERRORE CESTINO:>>File: " + srcfile + "****" + str(e))
+
+                            except IOError as e:
+                                logger.error("<<ERRORE COPIA>>File: " + srcfile + " su " + dstfile)
+                        else:
                             if self.copymode == 1:
                                 try:
                                     shutil.move(srcfile, self.globpropsHash['masterrepository_bin'],
@@ -615,25 +648,12 @@ class PhotoManagerAppFrame(wx.Frame):
                                     send2trash(srcfile)
                                 except IOError as e:
                                     logger.error("<<ERRORE CESTINO:>>File: " + srcfile + "****" + str(e))
-
-                        except IOError as e:
-                            logger.error("<<ERRORE COPIA>>File: " + srcfile + " su " + dstfile)
-                    else:
-                        if self.copymode == 1:
-                            try:
-                                shutil.move(srcfile, self.globpropsHash['masterrepository_bin'],
-                                            copy_function='copy2')
-                            except IOError as e:
-                                logger.error("<<ERRORE SPOSTAMENTO FILE:>>File: " + srcfile + " su " + dstfile)
-                        if self.copymode == 2:
-                            try:
-                                send2trash(srcfile)
-                            except IOError as e:
-                                logger.error("<<ERRORE CESTINO:>>File: " + srcfile + "****" + str(e))
-                        logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <<SKIPPED File:>" + srcfile + " identico a " + md5filename + dstext)
-                        logger.info(
-                            "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(file.path))
-                        self.globpropsHash['f_copia']['skipped'].append(file.path)
+                            logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <<SKIPPED File:>" + srcfile + " identico a " + md5filename + dstext)
+                            logger.info(
+                                "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(file.path))
+                            self.globpropsHash['f_copia']['skipped'].append(file.path)
+                    except:
+                        logger.info('Errore nell \'apertura del file %s',file.path)        
             logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
             dir_iterator.close()
         else:
