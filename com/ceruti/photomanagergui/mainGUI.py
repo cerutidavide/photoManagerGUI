@@ -200,17 +200,25 @@ class PhotoManagerAppFrame(wx.Frame):
         self.Center()
         self.Show(True)
     def fileDictShow(self,function='davide'):
-        logger.debug('****Funzione**** da mostrare %s',function)
+        outputmessage=''
+        riepilogo=''
+        logger.debug('****Funzione**** da mostrare %s',function)        
         if function in self.globpropsHash.keys():
-            logger.debug('****Funzione**** definita %s',function)
-            
-            for p in self.globpropsHash[function]:
-                logger.debug('****Funzione %s **** Parametro %s **** Valore %s',function,p,self.globpropsHash[function][p])
+            logger.debug('****Funzione**** definita %s',function)            
+            riepilogo='****Funzione**** definita '+function
+            for p in self.globpropsHash[function]:            
+                n=len(self.globpropsHash[function][p])
+                outputmessage+='> '+function+' '+p+' ('+str(n)+')\n'
+                riepilogo+=p+' '+str(n)+'\n'
+                for v in self.globpropsHash[function][p]:                   
+                    outputmessage+=str(n)+' >> '+v+'\n'
+                    logger.debug('****Funzione %s **** Parametro %s **** Valore %s',function,p,self.globpropsHash[function][p])
+                    n-=1
+                outputmessage+='\n'
         else:
             logger.debug('****Funzione**** non definita %s',function)
-            
-
-        pass
+        
+        return outputmessage+riepilogo
     def CleanConfigFunction(self):
         for k in self.globpropsHash.keys():
             logger.debug('CHIAVE: %s',str(k))
@@ -253,11 +261,10 @@ class PhotoManagerAppFrame(wx.Frame):
         self.fileDictShow('f_restore')
         self.gauge.SetValue(self.gauge.GetRange())
         logger.info("Dictionary File Da trattare: ")
-        outputWindowText=''
-        outputWindowText+='<<<< FILE Match MD5: '+str(len(self.globpropsHash['f_restore']['matched']))+' >>>>\n'
-        n=1
-        logger.debug("Numero di file Match: %s",len(self.globpropsHash['f_restore']['matched']))
-        logger.debug("Numero di file NO-Match: %s",len(self.globpropsHash['f_restore']['nomatch']))
+        outputWindowText=self.fileDictShow('f_restore')
+        
+#        logger.debug("Numero di file Match: %s",len(self.globpropsHash['f_restore']['matched']))
+#        logger.debug("Numero di file NO-Match: %s",len(self.globpropsHash['f_restore']['nomatch']))
         self.outputWindow.SetValue(outputWindowText)
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
@@ -318,7 +325,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             try:
                                 if not(os.path.exists(dstfile)):
                                     shutil.copy2(file,dstfile)
-                                    self.globpropsHash['f_restore']['original-restored'].append(file.path)
+                                    self.globpropsHash['f_restore']['original-restored'].append(dstfile)
                                 else:    
                                     self.globpropsHash['f_restore']['original-duplicated'].append(file.path)
                             except IOError:
@@ -329,7 +336,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             try:
                                 if not(os.path.exists(dstfile)):
                                     shutil.copy2(file,dstfile)
-                                    self.globpropsHash['f_restore']['non-original-restored'].append(file.path)
+                                    self.globpropsHash['f_restore']['non-original-restored'].append(dstfile)
                                 else:
                                     self.globpropsHash['f_restore']['non-original-duplicated'].append(file.path)
                             except IOError:
