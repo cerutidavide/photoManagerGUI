@@ -230,7 +230,7 @@ class PhotoManagerAppFrame(wx.Frame):
         return str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'            
 
 
-        self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
+
     def stringFormattedHash(self):
         result = ""
         for k in self.globpropsHash.keys():
