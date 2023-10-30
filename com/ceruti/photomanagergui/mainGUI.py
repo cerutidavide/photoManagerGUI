@@ -27,11 +27,14 @@ from send2trash import send2trash
 # 0a6157af3a585ba3add55c451ff2123c(1)
 # >>> print(match[2]) 
 # jpg
+#   IMAGEIO non legge qualcosa mentre exiftool legge tutto--> inutile usare IMAGEIO A REGIME per questa funzione (scrittura EXIF)
+#   gestione input --> aggiungere date picker e time picker per adesso delta in ore e fisso
+#   esempio >exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
+#   exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
 
 # ATTENZIONE se recycled_bin è incluso nel folder che sto processando con fixdate--LOOP INFINITO
 # ATTENZIONE se restored è incluso nel backup stesso problema
 # IMPOSTARE folder validi restore e backup ?
-
 # TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
 #   1. Restore della cartella backup da un'altra parte (Work-area?)
 # TODO CONTARE ERRORI COPIA (TOTALE ATTUALMENTE NON MATCH)
@@ -101,6 +104,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_copia'] = dict()
             myHashGlob['f_copia']['copied'] = []
             myHashGlob['f_copia']['skipped'] = []
+            myHashGlob['f_copia']['file_errors'] = []            
             myHashGlob['f_copia']['tot_files'] = []
             myHashGlob['f_copia']['tot_dirs'] = []
             myHashGlob['f_listaestensioni'] = dict()
@@ -111,16 +115,16 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_fixdate']['tot_files'] = []
             myHashGlob['f_fixdate']['tot_dirs'] = []
             myHashGlob['f_restore'] = dict()
-            myHashGlob['f_restore']['tot_files'] = []
             myHashGlob['f_restore']['tot_dirs'] = []
-            myHashGlob['f_restore']['error_files']=[]
             myHashGlob['f_restore']['original-restored'] = []
-            myHashGlob['f_restore']['non-original-restored'] = []
-            myHashGlob['f_restore']['reading_error_files'] =[]          
-            myHashGlob['f_restore']['non-original-duplicated']=[]   
-            myHashGlob['f_restore']['non-original-copyerrors']=[]
             myHashGlob['f_restore']['original-duplicated']=[]   
+            myHashGlob['f_restore']['non-original-restored'] = []
+            myHashGlob['f_restore']['non-original-duplicated']=[]   
+            myHashGlob['f_restore']['tot_files'] = []
+            myHashGlob['f_restore']['reading_error_files'] =[]          
             myHashGlob['f_restore']['original-copyerrors']=[]            
+            myHashGlob['f_restore']['non-original-copyerrors']=[]
+            myHashGlob['f_restore']['error_files']=[]
     return myHashGlob
 
 class PhotoManagerAppFrame(wx.Frame):
@@ -160,11 +164,7 @@ class PhotoManagerAppFrame(wx.Frame):
             self.workingDirList.SetPath(self.globpropsHash['selectedfolder'])
             self.workingDirList.SelectPath(self.globpropsHash['selectedfolder'], select=True)
         self.workingDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaWorkingDir)
-
-
-
         self.treeTitle = wx.StaticText(self, label="Scegliere Cartella di lavoro per le azioni sulla destra:", pos=(5, 5), size=(345, 25))
-
         self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),
                                           pos=(360, 400))
 
@@ -199,13 +199,15 @@ class PhotoManagerAppFrame(wx.Frame):
         self.SetFocus()
         self.Center()
         self.Show(True)
-    def fileDictShow(self,function='davide'):
+
+
+    def fileDictShow(self,function='davide',shortFMT=False):
         outputmessage=''
         riepilogo=''
         logger.debug('****Funzione**** da mostrare %s',function)        
         if function in self.globpropsHash.keys():
             logger.debug('****Funzione**** definita %s',function)            
-            riepilogo='****Funzione**** definita '+function
+            riepilogo='Funzione: '+function+'\n'
             for p in self.globpropsHash[function]:            
                 n=len(self.globpropsHash[function][p])
                 outputmessage+='> '+function+' '+p+' ('+str(n)+')\n'
@@ -216,8 +218,10 @@ class PhotoManagerAppFrame(wx.Frame):
                     n-=1
                 outputmessage+='\n'
         else:
-            logger.debug('****Funzione**** non definita %s',function)
-        
+            logger.debug('****Funzione**** non definita %s',function)        
+            riepilogo='Impossibile mostrare output funzione eseguita'
+        if shortFMT:
+            return riepilogo
         return outputmessage+riepilogo
     def CleanConfigFunction(self):
         for k in self.globpropsHash.keys():
@@ -258,14 +262,10 @@ class PhotoManagerAppFrame(wx.Frame):
         self.CleanConfigFunction()
         self.globpropsHash['f_restore']['dstfolder'] = [self.fileTS()]    
         self.Restore(self.globpropsHash['selectedfolder'],False)
-        self.fileDictShow('f_restore')
-        self.gauge.SetValue(self.gauge.GetRange())
-        logger.info("Dictionary File Da trattare: ")
-        outputWindowText=self.fileDictShow('f_restore')
-        
-#        logger.debug("Numero di file Match: %s",len(self.globpropsHash['f_restore']['matched']))
-#        logger.debug("Numero di file NO-Match: %s",len(self.globpropsHash['f_restore']['nomatch']))
-        self.outputWindow.SetValue(outputWindowText)
+        self.gauge.SetValue(self.gauge.GetRange())        
+        okCheck = wx.MessageDialog(self, self.fileDictShow('f_restore',True), style=wx.ICON_INFORMATION, caption="Restore Terminata")
+        okCheck.ShowModal()
+        self.outputWindow.SetValue(self.fileDictShow('f_restore'))        
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
 
@@ -360,29 +360,14 @@ class PhotoManagerAppFrame(wx.Frame):
         self.CleanConfigFunction()
         self.FixDateTime(self.globpropsHash['selectedfolder'],False)
         self.gauge.SetValue(self.gauge.GetRange())
-        logger.info("Dictionary File Da trattare: ")
-        outputWindowText=''
-        outputWindowText+='<<<< FILE AGGIORNATI: '+str(len(self.globpropsHash['f_fixdate']['fixed']))+' >>>>\n'
-        n=1
-        for f in self.globpropsHash['f_fixdate']['fixed']:
-            logger.info("fixed file >>> %s ",f)
-            outputWindowText+=str(n)+'-->'+f+"\n"
-            n+=1                                                   
-        outputWindowText+='\n<<<< FILE SALTATI: '+str(len(self.globpropsHash['f_fixdate']['skipped']))+' >>>>\n'            
-        n=1    
-        for s in self.globpropsHash['f_fixdate']['skipped']:
-            logger.info("skipped file >>> %s ",s)
-            outputWindowText+=str(n)+'-->'+s+"\n"
-            n+=1            
         logger.debug("Numero di file aggiornati: %s",len(self.globpropsHash['f_fixdate']['fixed']))
         logger.debug("Numero di file saltati: %s",len(self.globpropsHash['f_fixdate']['skipped']))
-        self.outputWindow.SetValue(outputWindowText)
-        okCheck = wx.MessageDialog(self, "File aggiornati: "+str(len(self.globpropsHash['f_fixdate']['fixed']))+" su un totale di "+str(len(self.globpropsHash['f_fixdate']['tot_files']))+"\nFile saltati: "+str(len(self.globpropsHash['f_fixdate']['skipped']))+"\nCartelle percorse: "+str(len(self.globpropsHash['f_fixdate']['tot_dirs'])), style=wx.ICON_INFORMATION, caption="Check Terminato")
+        self.outputWindow.SetValue(self.fileDictShow('f_fixdate'))
+        okCheck = wx.MessageDialog(self, self.fileDictShow('f_fixdate',True) , style=wx.ICON_INFORMATION, caption="Check Terminato")
         okCheck.ShowModal()
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
     def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):        
-        #check self.AvviaCheckArchivio(self,wx.EVT_BUTTON)
         self.fixmode=self.modoFixData.GetSelection()
         if os.path.exists(dir):
             id_log_counter_dir = str(len(self.globpropsHash['f_fixdate']['tot_dirs']))
@@ -428,23 +413,6 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.globpropsHash['f_fixdate']['tot_files'].append(str(file.path))
             dir_iterator.close()
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)
-
-#   intanto pare che il modify date sia il campo giusto (id 306 di EXIF)
-#   IMAGEIO non legge qualcosa mentre exiftool legge tutto--> inutile usare IMAGEIO A REGIME per questa funzione (scrittura EXIF)
-#   gestione input --> aggiungere date picker e time picker per adesso delta in ore e fisso
-#   esempio >exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
-#   exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
-#
-#
-#
-#
-
-    
-
-
-
-
-
     def AvviaCheckArchivio(self, evt):
         self.gauge.SetValue(0)
         self.duplicatedFilesDict.clear()
@@ -505,19 +473,17 @@ class PhotoManagerAppFrame(wx.Frame):
                     self.gauge.SetValue(self.fileCounter['tot_files'])
             dir_iterator.close()
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
+
+
+
     def AvviaCopiaFile(self, evt):
         self.CleanConfigFunction()
-        logger.debug("###PARAMETRI DI CONFIGURAZIONE PRIMA DELL INIZIO COPIA###  \n" + str(self.globpropsHash))
         self.importDirError = 0
         self.CopiaFile(self.globpropsHash['selectedfolder'])
         self.gauge.SetValue(self.gauge.GetRange())
-        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
-        if self.importDirError == 0:
-            okMD5 = wx.MessageDialog(self, "Import File Terminato\n\n" + "File copiati: " + str(
-                len(self.globpropsHash['f_copia']['copied'])) + "\nFile saltati: " + str(
-                len(self.globpropsHash['f_copia']['skipped'])) + "\nFile totali: " + str(len(self.globpropsHash['f_copia']['tot_files'])),
-                                     style=wx.ICON_INFORMATION, caption="Copia Terminata")
-            okMD5.ShowModal()
+        self.outputWindow.SetValue(self.fileDictShow('f_copia'))
+        okCheck = wx.MessageDialog(self, self.fileDictShow('f_copia',True) , style=wx.ICON_INFORMATION, caption="Copia Terminata")
+        okCheck.ShowModal()
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
 
@@ -627,7 +593,8 @@ class PhotoManagerAppFrame(wx.Frame):
                                 "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(file.path))
                             self.globpropsHash['f_copia']['skipped'].append(file.path)
                     except:
-                        logger.info('Errore nell \'apertura del file %s',file.path)        
+                        logger.info('Errore nell \'apertura del file %s',file.path)   
+                        self.globpropsHash['f_copia']['file_errors'].append(file.path)     
             logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
             dir_iterator.close()
         else:
