@@ -109,6 +109,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_copia']['tot_dirs'] = []
             myHashGlob['f_listaestensioni'] = dict()
             myHashGlob['f_checkarchivio'] = dict()
+            myHashGlob['f_checkarchivio']['duplicatedfiles']=dict()
             myHashGlob['f_fixdate'] = dict()
             myHashGlob['f_fixdate']['fixed'] = []
             myHashGlob['f_fixdate']['skipped'] = []
@@ -455,20 +456,27 @@ class PhotoManagerAppFrame(wx.Frame):
                 else:
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     logger.debug("FILE %s_%s  <APERTURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
-                    with open(file, "rb") as fmd5:
-                        md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
-                        logger.debug("FILE %s_%s <md5 calcolato> %s",id_log_counter_dir,id_log_counter,md5filename)
-                        if md5filename not in self.duplicatedFilesDict:
-                            self.duplicatedFilesDict[md5filename]=[file.path]                            
-                            logger.debug("FILE %s_%s <INSERIMENTO NUOVO> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.duplicatedFilesDict[md5filename]))
-                        else:
-                            listvalue=self.duplicatedFilesDict[md5filename]
-                            listvalue.append(file.path)
-                            logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO>: %s , Nuovo valore lista file per chiave: %s',id_log_counter_dir,id_log_counter,file.path,listvalue)
-                            self.duplicatedFilesDict[md5filename]=listvalue
-                            logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.duplicatedFilesDict[md5filename])                                                    
-                        fmd5.close()
-                        logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
+                    try:
+                        with open(file, "rb") as fmd5:
+                            md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
+                            logger.debug("FILE %s_%s <md5 calcolato> %s",id_log_counter_dir,id_log_counter,md5filename)
+                            try:                            
+                                if md5filename not in self.duplicatedFilesDict:
+                                    #self.globpropsHash['f_checkarchivio']['duplicatedfiles']
+                                    self.duplicatedFilesDict[md5filename]=[file.path]                            
+                                    logger.debug("FILE %s_%s <INSERIMENTO NUOVO> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.duplicatedFilesDict[md5filename]))
+                                else:
+                                    listvalue=self.duplicatedFilesDict[md5filename]
+                                    listvalue.append(file.path)
+                                    logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO>: %s , Nuovo valore lista file per chiave: %s',id_log_counter_dir,id_log_counter,file.path,listvalue)
+                                    self.duplicatedFilesDict[md5filename]=listvalue
+                                    logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.duplicatedFilesDict[md5filename])                                                    
+                            except KeyError:
+                                logger.error('ERRORE CHIAVE')
+                            fmd5.close()
+                    except IOError:
+                        logger.error('ERRORE FILE')                        
+                    logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     self.fileCounter['tot_files']+=1
                     self.gauge.SetValue(self.fileCounter['tot_files'])
             dir_iterator.close()
