@@ -37,7 +37,7 @@ from send2trash import send2trash
 # IMPOSTARE folder validi restore e backup ?
 # TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
 #   1. Restore della cartella backup da un'altra parte (Work-area?)
-# TODO CONTARE ERRORI COPIA (TOTALE ATTUALMENTE NON MATCH)
+# TODO CONTARE ERRORI COPIA (TOTALE ATTUALMENTE NON MATCH) e anche numero di directory adesso non match
 # TODO NOTA BENE: _original troppe volte rende i file inaccessibili
 # TODO FORMATTAZIONE LOG
 # TODO gestione immagini non riconosciute con Exitool
@@ -109,7 +109,9 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_copia']['tot_dirs'] = []
             myHashGlob['f_listaestensioni'] = dict()
             myHashGlob['f_checkarchivio'] = dict()
-            myHashGlob['f_checkarchivio']['duplicatedfiles']=dict()
+            myHashGlob['f_checkarchivio']['tot_dirs']=[]
+            myHashGlob['f_checkarchivio']['tot_files']=[]
+            myHashGlob['f_checkarchivio']['duplicatedfiles_dict']=dict()
             myHashGlob['f_fixdate'] = dict()
             myHashGlob['f_fixdate']['fixed'] = []
             myHashGlob['f_fixdate']['skipped'] = []
@@ -210,14 +212,25 @@ class PhotoManagerAppFrame(wx.Frame):
             logger.debug('****Funzione**** definita %s',function)            
             riepilogo='Funzione: '+function+'\n'
             for p in self.globpropsHash[function]:            
-                n=len(self.globpropsHash[function][p])
-                outputmessage+='> '+function+' '+p+' ('+str(n)+')\n'
-                riepilogo+=p+' '+str(n)+'\n'
-                for v in self.globpropsHash[function][p]:                   
-                    outputmessage+=str(n)+' >> '+v+'\n'
-                    logger.debug('****Funzione %s **** Parametro %s **** Valore %s',function,p,self.globpropsHash[function][p])
-                    n-=1
-                outputmessage+='\n'
+                match=re.search('_dict',p)
+                if match:
+                    logger.debug('PARAMETRO %s è un dict', p)
+
+                    outputmessage+='> '+function+' '+p+' elementi distinti: '+str(len(self.globpropsHash[function][p].keys()))+'\n'
+                    riepilogo+=p+'-file distinti: '+str(len(self.globpropsHash[function][p].keys()))
+                    for k,v in self.globpropsHash[function][p].items():                   
+                        outputmessage+='Chiave>> '+k+' >>Valore '+str(v)+'\n'
+                        logger.debug('****Funzione %s **** Parametro %s **** Chiave %s **** Valore %s',function,p,str(k),self.globpropsHash[function][p][k])
+                    outputmessage+='\n'
+                else:
+                    n=len(self.globpropsHash[function][p])
+                    outputmessage+='> '+function+' '+p+' ('+str(n)+')\n'
+                    riepilogo+=p+' '+str(n)+'\n'
+                    for v in self.globpropsHash[function][p]:                   
+                        outputmessage+=str(n)+' >> '+v+'\n'
+                        logger.debug('****Funzione %s **** Parametro %s **** Valore %s',function,p,self.globpropsHash[function][p])
+                        n-=1
+                    outputmessage+='\n'
         else:
             logger.debug('****Funzione**** non definita %s',function)        
             riepilogo='Impossibile mostrare output funzione eseguita'
@@ -381,7 +394,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         logger.debug("DIRECTORY %s <NON ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,str(file.path))                                        
                     else:
                         logger.debug("DIRECTORY %s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,str(file.path))                          
-                        self.FixDateTime(file,True)                                      
+                        self.FixDateTime(str(file.path),True)                                      
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
@@ -415,44 +428,26 @@ class PhotoManagerAppFrame(wx.Frame):
             dir_iterator.close()
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)
     def AvviaCheckArchivio(self, evt):
-        self.gauge.SetValue(0)
-        self.duplicatedFilesDict.clear()
-        self.Errors = 0
-        tot_files=0
-        self.CheckArchivio(self.globpropsHash['selectedfolder'])                
+        self.CleanConfigFunction()
+        self.CheckArchivio(self.globpropsHash['selectedfolder'])
         self.gauge.SetValue(self.gauge.GetRange())
-        logger.info("Dictionary File Trovati: ")
-        found_duplicate = False
-        outputWindowText=''
-        for k in self.duplicatedFilesDict.keys():
-            logger.info("chiave >>> %s  valore >>> %s",k,self.duplicatedFilesDict[k])
-            tot_files+=len(self.duplicatedFilesDict[k])
-            if len(self.duplicatedFilesDict[k])>1:
-                found_duplicate=True
-                outputWindowText+='<<<< INIZIO '+k+'>>>>\n'
-                for item in self.duplicatedFilesDict[k]:
-                    outputWindowText+='-'+str(self.duplicatedFilesDict[k].index(item)+1)+'>'+item+'\n'
-                outputWindowText+='<<<< FINE '+k+'>>>>\n\n'
-        if not found_duplicate:
-            outputWindowText += 'NON sono stati trovati DUPLICATI\n'
-        logger.debug("Numero di file distinti: %s",len(self.duplicatedFilesDict.keys()))
-        logger.debug("Numero di file totali: %s",tot_files)
-        self.outputWindow.SetValue(outputWindowText)
-        if self.Errors == 0:
-            okCheck = wx.MessageDialog(self, "FUNZIONE DA COMPLETARE - Check Archivio Terminato\n\nFile distinti trovati: "+str(len(self.duplicatedFilesDict.keys()))+"\n\nFile totali trovati: "+str(tot_files), style=wx.ICON_INFORMATION, caption="Check Terminato")
-            okCheck.ShowModal()
+        self.outputWindow.SetValue(self.fileDictShow('f_checkarchivio'))
+        okCheck = wx.MessageDialog(self, self.fileDictShow('f_checkarchivio',True) , style=wx.ICON_INFORMATION, caption="Check Terminato")
+        okCheck.ShowModal()
         self.gauge.SetValue(0)
+        self.CleanConfigFunction()
     def CheckArchivio(self, dir="C:\\Users\\c333053\\TestImport"):
-        id_log_counter_dir = str(self.fileCounter['tot_dirs'])        
-        self.gauge.SetValue(self.fileCounter['tot_files'])
+        self.globpropsHash['f_checkarchivio']['tot_dirs'].append(dir)
+        id_log_counter_dir = len(self.globpropsHash['f_checkarchivio']['tot_dirs'])
+        self.gauge.SetValue(len(self.globpropsHash['f_checkarchivio']['tot_files']))
         if os.path.exists(dir):
             logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
-                id_log_counter = str(self.fileCounter['tot_files'])
+                id_log_counter = len(str(self.globpropsHash['f_checkarchivio']['tot_files']))
                 if file.is_dir():                    
-                    logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                    
-                    self.CheckArchivio(file)
+                    logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                                        
+                    self.CheckArchivio(str(file.path))
                 else:
                     logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     logger.debug("FILE %s_%s  <APERTURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
@@ -461,24 +456,23 @@ class PhotoManagerAppFrame(wx.Frame):
                             md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
                             logger.debug("FILE %s_%s <md5 calcolato> %s",id_log_counter_dir,id_log_counter,md5filename)
                             try:                            
-                                if md5filename not in self.duplicatedFilesDict:
-                                    #self.globpropsHash['f_checkarchivio']['duplicatedfiles']
-                                    self.duplicatedFilesDict[md5filename]=[file.path]                            
-                                    logger.debug("FILE %s_%s <INSERIMENTO NUOVO> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.duplicatedFilesDict[md5filename]))
+                                if md5filename not in self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict']:                                    
+                                    self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]=[file.path]                            
+                                    logger.debug("FILE %s_%s <INSERIMENTO NUOVO> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]))
                                 else:
-                                    listvalue=self.duplicatedFilesDict[md5filename]
+                                    listvalue=self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]
                                     listvalue.append(file.path)
                                     logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO>: %s , Nuovo valore lista file per chiave: %s',id_log_counter_dir,id_log_counter,file.path,listvalue)
-                                    self.duplicatedFilesDict[md5filename]=listvalue
-                                    logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.duplicatedFilesDict[md5filename])                                                    
+                                    self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]=listvalue
+                                    logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename])                                                    
                             except KeyError:
                                 logger.error('ERRORE CHIAVE')
                             fmd5.close()
                     except IOError:
                         logger.error('ERRORE FILE')                        
                     logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
-                    self.fileCounter['tot_files']+=1
-                    self.gauge.SetValue(self.fileCounter['tot_files'])
+                    self.globpropsHash['f_checkarchivio']['tot_files'].append(file.path)
+                    self.gauge.SetValue(len(self.globpropsHash['f_checkarchivio']['tot_files']))
             dir_iterator.close()
             logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
 
