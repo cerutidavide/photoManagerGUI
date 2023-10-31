@@ -18,15 +18,6 @@ from send2trash import send2trash
 
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
 # NB pip install --proxy http://user:password@proxy.dominio.it:porta wxPython
-# >>> stringa='2023_10_20_10_56_34.368481_2023_10_20_10_53_56.900199_2023_10_20_10_52_44.222646_2023_10_19_16_43_01.178484_0a6157af3a585ba3add55c451ff2123c(1).jpg'          
-# >>> match=re.search('.*_(.*)\.',stringa)
-# >>> print(match[1])
-# 0a6157af3a585ba3add55c451ff2123c(1)
-# >>> match=re.search('.*_(.*)\.(.*)',stringa) 
-# >>> print(match[1])
-# 0a6157af3a585ba3add55c451ff2123c(1)
-# >>> print(match[2]) 
-# jpg
 #   IMAGEIO non legge qualcosa mentre exiftool legge tutto--> inutile usare IMAGEIO A REGIME per questa funzione (scrittura EXIF)
 #   gestione input --> aggiungere date picker e time picker per adesso delta in ore e fisso
 #   esempio >exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
@@ -34,9 +25,8 @@ from send2trash import send2trash
 
 # ATTENZIONE se recycled_bin è incluso nel folder che sto processando con fixdate--LOOP INFINITO
 # ATTENZIONE se restored è incluso nel backup stesso problema
+# ATTENZIONE fixdate non controlla esistenza cartella di destinazione nella move del file _original e poi copia in cestino
 # IMPOSTARE folder validi restore e backup ?
-# TODO PRINCIPALE: lista task minimali per costruire il nuovo archivio
-#   1. Restore della cartella backup da un'altra parte (Work-area?)
 # TODO CONTARE ERRORI COPIA (TOTALE ATTUALMENTE NON MATCH) e anche numero di directory adesso non match
 # TODO NOTA BENE: _original troppe volte rende i file inaccessibili
 # TODO FORMATTAZIONE LOG
@@ -187,7 +177,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.modoFixData = wx.RadioBox(self, label="Attraversare Sotto Cartelle Sì/No", majorDimension=2,
                                      pos=(360, 210), size=(345, -1),
                                      choices=["Sì", "No"])
-        self.avviaRestore = wx.Button(self, label="Avvia Restore file _original nel folder selezionato", pos=(360, 280),size=(345,-1))
+        self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 280),size=(345,-1))
         self.avviaRestore.Bind(wx.EVT_BUTTON, self.AvviaRestore)
 
 
@@ -374,8 +364,6 @@ class PhotoManagerAppFrame(wx.Frame):
         self.CleanConfigFunction()
         self.FixDateTime(self.globpropsHash['selectedfolder'],False)
         self.gauge.SetValue(self.gauge.GetRange())
-        logger.debug("Numero di file aggiornati: %s",len(self.globpropsHash['f_fixdate']['fixed']))
-        logger.debug("Numero di file saltati: %s",len(self.globpropsHash['f_fixdate']['skipped']))
         self.outputWindow.SetValue(self.fileDictShow('f_fixdate'))
         okCheck = wx.MessageDialog(self, self.fileDictShow('f_fixdate',True) , style=wx.ICON_INFORMATION, caption="Check Terminato")
         okCheck.ShowModal()
@@ -409,7 +397,7 @@ class PhotoManagerAppFrame(wx.Frame):
                             et.execute(exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar,file.path)                            
                             srcbckfullfilename=str(file.path)+'_original'                            
                             dstbckfilename=str(file.name)+'_original'                            
-                            dstbckfoldername=self.globpropsHash['masterrepository_bin']
+                            dstbckfoldername=self.globpropsHash['masterrepository_bak']
                             dstbckfullfilename=dstbckfoldername+'\\'+str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'+dstbckfilename                            
                             logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
                             logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout).replace('\n',''))
@@ -418,9 +406,11 @@ class PhotoManagerAppFrame(wx.Frame):
                             if et.last_status==0 and et.last_stdout.rfind('unchanged')<0 :
                                 logger.debug("FILE %s_%s <SRC: %s> <DST: %s>",id_log_counter_dir,id_log_counter,srcbckfullfilename,dstbckfullfilename)
                                 self.globpropsHash['f_fixdate']['fixed'].append(str(file.path))
-                                shutil.move(srcbckfullfilename, dstbckfullfilename ,copy_function='copy2')
+                                if not os.path.exists(dstbckfoldername):
+                                    os.makedirs(dstbckfoldername)
+                                shutil.move(srcbckfullfilename, dstbckfullfilename,copy_function='copy2')    
                             else:
-                                logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ",file.path) 
+                                logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ",str(file.path)) 
                                 self.globpropsHash['f_fixdate']['skipped'].append(str(file.path))        
                         except IOError as e:
                             logger.error("<<ERRORE SPOSTAMENTO FILE BACKUP: %s su %s ",srcbckfullfilename,dstbckfullfilename)                            
