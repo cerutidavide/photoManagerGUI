@@ -95,8 +95,10 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_restore']['non-original-copyerrors']=[]
             myHashGlob['f_restore']['error_files']=[]
             myHashGlob['f_loadextension'] = dict()
-            myHashGlob['f_loadextension']['extension_list'] = []
-            
+            myHashGlob['f_loadextension']['root_folder'] = []            
+            myHashGlob['f_loadextension']['extension_list'] = []            
+
+
     return myHashGlob
 
 class PhotoManagerAppFrame(wx.Frame):
@@ -131,7 +133,7 @@ class PhotoManagerAppFrame(wx.Frame):
             self.workingDirList.SelectPath(self.globpropsHash['selectedfolder'], select=True)
         self.workingDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaWorkingDir)
         self.treeTitle = wx.StaticText(self, label="Scegliere Cartella di lavoro per le azioni sulla destra:", pos=(5, 5), size=(345, 25))
-        self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),
+        self.propertyList = wx.StaticText(self, label="Archivio Fotografie: \n" + self.stringFormattedHash(),
                                           pos=(360, 400))
         self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",
                                                     pos=(360, 30),size=(345,-1))
@@ -214,7 +216,7 @@ class PhotoManagerAppFrame(wx.Frame):
     def SelezionaWorkingDir(self,evt):        
         if self.workingDirList.GetPath():
             self.globpropsHash['selectedfolder'] = self.workingDirList.GetPath()
-        self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
+        
 
 
 
@@ -230,10 +232,10 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
 
-
     def CaricaEstensioni(self, dir="/tmp/", firstcall=True):
         if firstcall is True:
             self.globpropsHash['f_loadextension']['extension_list'] = []
+            self.globpropsHash['f_loadextension']['root_folder'] = [str(dir)]
         try:
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
@@ -253,14 +255,9 @@ class PhotoManagerAppFrame(wx.Frame):
         except Exception as e:
             print(e)
 
-
-
-
     def Esci(self, evt):
         self.Close()
         pass
-
-
 
     def AvviaRestore(self,evt):
         self.CleanConfigFunction()
