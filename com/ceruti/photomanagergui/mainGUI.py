@@ -25,7 +25,6 @@ from send2trash import send2trash
 
 # ATTENZIONE se recycled_bin è incluso nel folder che sto processando con fixdate--LOOP INFINITO
 # ATTENZIONE se restored è incluso nel backup stesso problema
-# ATTENZIONE fixdate non controlla esistenza cartella di destinazione nella move del file _original e poi copia in cestino
 # IMPOSTARE folder validi restore e backup ?
 # TODO CONTARE ERRORI COPIA (TOTALE ATTUALMENTE NON MATCH) e anche numero di directory adesso non match
 # TODO NOTA BENE: _original troppe volte rende i file inaccessibili
