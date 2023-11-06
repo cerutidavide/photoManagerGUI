@@ -41,9 +41,6 @@ from send2trash import send2trash
 # TODO valutare/verificare multiplatform
 # provare a pensare "immagini simili" e.g.  librerie AI di analisi immagini...
 
-
-
-
 def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
@@ -97,8 +94,6 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_loadextension'] = dict()
             myHashGlob['f_loadextension']['root_folder'] = []            
             myHashGlob['f_loadextension']['extension_list'] = []            
-
-
     return myHashGlob
 
 class PhotoManagerAppFrame(wx.Frame):
@@ -132,9 +127,12 @@ class PhotoManagerAppFrame(wx.Frame):
             self.workingDirList.SetPath(self.globpropsHash['selectedfolder'])
             self.workingDirList.SelectPath(self.globpropsHash['selectedfolder'], select=True)
         self.workingDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaWorkingDir)
-        self.treeTitle = wx.StaticText(self, label="Scegliere Cartella di lavoro per le azioni sulla destra:", pos=(5, 5), size=(345, 25))
-        self.propertyList = wx.StaticText(self, label="Archivio Fotografie: \n" + self.stringFormattedHash(),
-                                          pos=(360, 400))
+
+        
+        self.archivioFotografie = wx.StaticText(self, label="Archivio Fotografie Master: " + self.globpropsHash['masterrepository'],pos=(5, 600))
+
+        self.directoryCorrente = wx.StaticText(self, label="Cartella Selezionata per Azioni sulla destra: " + self.globpropsHash['selectedfolder'],
+                                          pos=(5, 5))
         self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",
                                                     pos=(360, 30),size=(345,-1))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
@@ -208,18 +206,10 @@ class PhotoManagerAppFrame(wx.Frame):
                 logger.debug('Parametro generale: %s Valore: %s',str(k),str(self.globpropsHash[k]))
     def fileTS(self):
         return str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'            
-    def stringFormattedHash(self):
-        result = ""
-        for k in self.globpropsHash.keys():
-            result = result + k + " = " + str(self.globpropsHash[k]) + "\n"
-        return result
     def SelezionaWorkingDir(self,evt):        
         if self.workingDirList.GetPath():
             self.globpropsHash['selectedfolder'] = self.workingDirList.GetPath()
-        self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())        
-
-
-
+        self.directoryCorrente.SetLabel("Cartella Selezionata per Azioni sulla destra: " + self.globpropsHash['selectedfolder'])        
 
     def AvviaCaricaEstensioni(self, evt):
         self.gauge.SetValue(0)
@@ -414,6 +404,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.globpropsHash['f_fixdate']['tot_files'].append(str(file.path))
             dir_iterator.close()
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>",dir)
+    
     def AvviaCheckArchivio(self, evt):
         self.CleanConfigFunction()
         self.CheckArchivio(self.globpropsHash['selectedfolder'])
@@ -431,7 +422,7 @@ class PhotoManagerAppFrame(wx.Frame):
             logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
-                id_log_counter = len(str(self.globpropsHash['f_checkarchivio']['tot_files']))
+                id_log_counter = len(self.globpropsHash['f_checkarchivio']['tot_files'])
                 if file.is_dir():                    
                     logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                                        
                     self.CheckArchivio(str(file.path))
@@ -595,10 +586,10 @@ class PhotoManagerAppFrame(wx.Frame):
 if __name__ == '__main__':    
     logger = logging.getLogger('photoark')
     stdout = logging.StreamHandler()
-    fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)20s()] %(message)s")
+    fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.propagate = False    
     PhotoManagerApp = wx.App()
     framePrincipale = PhotoManagerAppFrame(None, "PhotoManager")
