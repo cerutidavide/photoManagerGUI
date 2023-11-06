@@ -26,46 +26,23 @@ from send2trash import send2trash
 # ATTENZIONE se recycled_bin è incluso nel folder che sto processando con fixdate--LOOP INFINITO
 # ATTENZIONE se restored è incluso nel backup stesso problema
 # IMPOSTARE folder validi restore e backup ?
-# TODO CONTARE ERRORI COPIA (TOTALE ATTUALMENTE NON MATCH) e anche numero di directory adesso non match
+
 # TODO NOTA BENE: _original troppe volte rende i file inaccessibili
 # TODO FORMATTAZIONE LOG
-# TODO gestione immagini non riconosciute con Exitool
+# TODO gestione immagini non riconosciute con Exiftool
 # TODO valutare "con e senza exif tool"
-# TODO conteggio file e cartelle in check duplicati archivio
-# TODO conteggio errori copia
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
 # TODO LOG SU FILE
-# TODO CONTROLLO PERMESSI
 # TODO sistemare pulsanti e barre di avanzamento
-# TODO riorganizzare interfaccia grafica
 # TODO EXIF SET GPS DATA ORA
-# TODO check VERO DUPLICATI (con un dict, direttamente sull'archivio e fare anche statistiche sull'archivio)
 # TODO valutare database per statistiche
 # TODO valutare refactor "a oggetti" con vari moduli
 # TODO Impacchettare appliczione
 # TODO valutare/verificare multiplatform
+# provare a pensare "immagini simili" e.g.  librerie AI di analisi immagini...
 
 
-def loadFileExtensionList(self, filepath="/tmp/", extensionList=[], firstcall=True):
-    if firstcall is True:
-        extensionList = []
-    try:
-        for file in os.listdir(filepath):
-            if os.path.isdir(filepath + "/" + file):
-                loadFileExtensionList(self, filepath + "/" + file, extensionList, False)
-                pass
-            else:
-                ext = os.path.splitext(filepath + "/" + file)
-                if ext[1] != "":
-                    if ext[1] not in extensionList:
-                        extensionList.append(ext[1])
-                        logger.debug("Aggiunta " + ext[1] + " alla lista delle estensioni")
-                        self.gauge.SetValue(self.gauge.GetValue() + 1)
-                        if self.gauge.GetValue() >= self.gauge.GetRange():
-                            self.gauge.SetValue(0)
-    except Exception as e:
-        print(e)
-    return extensionList
+
 
 def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
@@ -117,6 +94,9 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['f_restore']['original-copyerrors']=[]            
             myHashGlob['f_restore']['non-original-copyerrors']=[]
             myHashGlob['f_restore']['error_files']=[]
+            myHashGlob['f_loadextension'] = dict()
+            myHashGlob['f_loadextension']['extension_list'] = []
+            
     return myHashGlob
 
 class PhotoManagerAppFrame(wx.Frame):
@@ -136,12 +116,6 @@ class PhotoManagerAppFrame(wx.Frame):
         self.globpropsHash = LoadPropertiesAndInitArchive(self.basePath, self.baseFile, ".masterrepository.conf")
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
         logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
-        self.importDirFileExtensions = {}
-        self.importMd5fileHash = {}
-        self.duplicatedFilesDict = {}
-        self.duplicatedFilesListValues=[]
-        self.skippedfileHash = {}
-        self.loggingDict = {}
         self.importDirError = 0
         self.copymode = 0
         self.gauge = wx.Gauge(self, pos=(5, 640), size=(max_gauge_size, -1))
@@ -159,7 +133,6 @@ class PhotoManagerAppFrame(wx.Frame):
         self.treeTitle = wx.StaticText(self, label="Scegliere Cartella di lavoro per le azioni sulla destra:", pos=(5, 5), size=(345, 25))
         self.propertyList = wx.StaticText(self, label="Parametri caricati: \n" + self.stringFormattedHash(),
                                           pos=(360, 400))
-
         self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",
                                                     pos=(360, 30),size=(345,-1))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
@@ -179,19 +152,14 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 280),size=(345,-1))
         self.avviaRestore.Bind(wx.EVT_BUTTON, self.AvviaRestore)
 
-
         self.esci = wx.Button(self, label="ESCI", pos=(360, 350), size=(345, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
-        self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300),style=wx.TE_MULTILINE)
-        
-
-        self.fileCounter = {'tot_files': 0, 'copied_files': 0, 'skipped_files': 0, 'tot_dirs':0, 'duplicated_files':0}
+        self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300),style=wx.TE_MULTILINE)        
         
         self.SetFocus()
         self.Center()
         self.Show(True)
-
 
     def fileDictShow(self,function='davide',shortFMT=False):
         outputmessage=''
@@ -204,7 +172,6 @@ class PhotoManagerAppFrame(wx.Frame):
                 match=re.search('_dict',p)
                 if match:
                     logger.debug('PARAMETRO %s è un dict', p)
-
                     outputmessage+='> '+function+' '+p+' elementi distinti: '+str(len(self.globpropsHash[function][p].keys()))+'\n'
                     riepilogo+=p+'-file distinti: '+str(len(self.globpropsHash[function][p].keys()))
                     for k,v in self.globpropsHash[function][p].items():                   
@@ -227,17 +194,18 @@ class PhotoManagerAppFrame(wx.Frame):
             return riepilogo
         return outputmessage+riepilogo
     def CleanConfigFunction(self):
+        logger.debug('Scorro dict di configurazione')
         for k in self.globpropsHash.keys():
-            logger.debug('CHIAVE: %s',str(k))
             if str(k).startswith('f_'):
+                logger.debug('Funzione: %s',str(k))
                 for c in self.globpropsHash[k].keys():
-                    logger.debug('DICT DA SVUOTARE [%s][%s] VALORE DICT DA SVUOTARE %s',str(k),str(c),str(self.globpropsHash[k][c]))
-                    self.globpropsHash[k][c].clear()
+                    logger.debug('Nome Dict Da Cancellare [%s][%s] Valore da Cancellare  %s',str(k),str(c),str(self.globpropsHash[k][c]))
+                    self.globpropsHash[k][c].clear()            
+                    logger.debug('Dict Svuotato [%s][%s] Valore %s',str(k),str(c),str(self.globpropsHash[k][c]))
+            else:
+                logger.debug('Parametro generale: %s Valore: %s',str(k),str(self.globpropsHash[k]))
     def fileTS(self):
         return str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'            
-
-
-
     def stringFormattedHash(self):
         result = ""
         for k in self.globpropsHash.keys():
@@ -247,20 +215,53 @@ class PhotoManagerAppFrame(wx.Frame):
         if self.workingDirList.GetPath():
             self.globpropsHash['selectedfolder'] = self.workingDirList.GetPath()
         self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())
+
+
+
+
     def AvviaCaricaEstensioni(self, evt):
-        logger.debug("**********  %s ",self.globpropsHash['selectedfolder'])
-        messaggioEstensioni = str(loadFileExtensionList(self, self.globpropsHash['selectedfolder'], True))
-        messaggioFolderImport =self.globpropsHash['selectedfolder']
-        self.gauge.SetValue(self.gauge.GetRange())
-        self.messageExtension = wx.MessageBox(
-            "Nel folder import " + messaggioFolderImport + "\nci sono i seguenti tipi di file: \n" + messaggioEstensioni,
-            '', wx.CLOSE)
-        logger.info(messaggioEstensioni)
         self.gauge.SetValue(0)
+        self.CleanConfigFunction()        
+        self.CaricaEstensioni(self.globpropsHash['selectedfolder'],True)
+        self.gauge.SetValue(self.gauge.GetRange())        
+        okCheck = wx.MessageDialog(self, self.fileDictShow('f_loadextension',True), style=wx.ICON_INFORMATION, caption="Esecuzione Lista Estensioni Terminata")
+        okCheck.ShowModal()
+        self.outputWindow.SetValue(self.fileDictShow('f_loadextension'))        
+        self.gauge.SetValue(0)
+        self.CleanConfigFunction()
+
+
+    def CaricaEstensioni(self, dir="/tmp/", firstcall=True):
+        if firstcall is True:
+            self.globpropsHash['f_loadextension']['extension_list'] = []
+        try:
+            dir_iterator=os.scandir(dir)
+            for file in dir_iterator:
+                if file.is_dir():                    
+                    self.CaricaEstensioni(file, False)
+                else:
+                    ext=pathlib.Path(file).suffix
+                    logger.debug('Trovata estensione %s: ',str(ext))
+                    if ext not in self.globpropsHash['f_loadextension']['extension_list']:
+                        self.globpropsHash['f_loadextension']['extension_list'].append(ext)
+                        logger.debug('Aggiunta estensione %s: ',str(ext))
+                    else:
+                        logger.debug('Non aggiunta estensione %s, già presente: ',str(ext))
+                    self.gauge.SetValue(self.gauge.GetValue() + 1)
+                    if self.gauge.GetValue() >= self.gauge.GetRange():
+                        self.gauge.SetValue(0)
+        except Exception as e:
+            print(e)
+
+
+
 
     def Esci(self, evt):
         self.Close()
         pass
+
+
+
     def AvviaRestore(self,evt):
         self.CleanConfigFunction()
         self.globpropsHash['f_restore']['dstfolder'] = [self.fileTS()]    
@@ -594,12 +595,10 @@ class PhotoManagerAppFrame(wx.Frame):
                                    caption="Directory Import Inesistente")
             dlg.ShowModal()
 
-
-if __name__ == '__main__':
-    
+if __name__ == '__main__':    
     logger = logging.getLogger('photoark')
     stdout = logging.StreamHandler()
-    fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)20s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
     logger.setLevel(logging.DEBUG)
