@@ -224,8 +224,10 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def CaricaEstensioni(self, dir="/tmp/", firstcall=True):
         if firstcall is True:
+            logger.debug('Prima esecuzione Carica Estensioni radice: %s',str(dir))            
             self.globpropsHash['f_loadextension']['extension_list'] = []
-            self.globpropsHash['f_loadextension']['root_folder'] = [str(dir)]
+            logger.info('Lista estensione inizializzata vuota %s', str(dir))  
+            self.globpropsHash['f_loadextension']['root_folder'] = [str(dir)]            
         try:
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
@@ -236,14 +238,14 @@ class PhotoManagerAppFrame(wx.Frame):
                     logger.debug('Trovata estensione %s: ',str(ext))
                     if ext not in self.globpropsHash['f_loadextension']['extension_list']:
                         self.globpropsHash['f_loadextension']['extension_list'].append(ext)
-                        logger.debug('Aggiunta estensione %s: ',str(ext))
+                        logger.info('Aggiunta estensione %s', str(ext))
                     else:
                         logger.debug('Non aggiunta estensione %s, già presente: ',str(ext))
                     self.gauge.SetValue(self.gauge.GetValue() + 1)
                     if self.gauge.GetValue() >= self.gauge.GetRange():
                         self.gauge.SetValue(0)
         except Exception as e:
-            print(e)
+            logger.error('Errore ricerca file o directory %s',str(e))
 
     def Esci(self, evt):
         self.Close()
