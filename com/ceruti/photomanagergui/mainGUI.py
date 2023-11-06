@@ -216,7 +216,7 @@ class PhotoManagerAppFrame(wx.Frame):
     def SelezionaWorkingDir(self,evt):        
         if self.workingDirList.GetPath():
             self.globpropsHash['selectedfolder'] = self.workingDirList.GetPath()
-        
+        self.propertyList.SetLabel("Parametri caricati: \n" + self.stringFormattedHash())        
 
 
 
