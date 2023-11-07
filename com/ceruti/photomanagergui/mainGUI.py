@@ -45,57 +45,55 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                            filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
     myHashGlob['fileconfprincipale'] = filenameGlob
-    logger.debug("<<Parametro impostato #file_di_configurazione_principale# " + os.path.join(basePath, filenameGlob))
     myHashGlob['masterrepositoryconf'] = filenameMstr
-    logger.debug("<<Parametro impostato #masterrepositoryconf# " + filenameMstr)
+    logger.debug("File configurazione principale: %s\\%s Path PC aziendale: C:\\Users\\Davide\\PhotoManager Path PC Casa: C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master",basePath,filenameGlob)
     with open(os.path.join(basePath, filenameGlob), encoding="utf-8") as f:
         for line in f.readlines():
-            # print(line)
             match = re.search('^masterrepository=(.*)', line)
-            # print(match)
             if match:
                 myHashGlob['masterrepository'] = match[1]
-                logger.debug("<<Parametro letto nel file #masterrepository# %s",str(match[1]))
+                logger.debug("Parametro letto nel file di configurazione: #masterrepository# %s",str(match[1]))
             match = re.search('^selectedfolder=(.*)', line)
             if match:
                 myHashGlob['selectedfolder'] = match[1]
-                logger.debug("<<Parametro letto nel file #selectedfolder# " + str(match[1]))                        
-            myHashGlob['masterrepository_bin'] = myHashGlob['masterrepository']+"\\recycled-bin"
-            myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository']+"\\backup"
-            myHashGlob['masterrepository_work'] = myHashGlob['masterrepository']+"\\work-area"
-            myHashGlob['masterrepository_restore'] = myHashGlob['masterrepository']+"\\restoredfiles"
-            myHashGlob['masterrepository_originals'] = myHashGlob['masterrepository']+"\\foto_originali"
-            myHashGlob['masterrepository_lightroom'] = myHashGlob['masterrepository']+"\\from_export_lightroom"
-            myHashGlob['f_copia'] = dict()
-            myHashGlob['f_copia']['copied'] = []
-            myHashGlob['f_copia']['skipped'] = []
-            myHashGlob['f_copia']['file_errors'] = []            
-            myHashGlob['f_copia']['tot_files'] = []
-            myHashGlob['f_copia']['tot_dirs'] = []
-            myHashGlob['f_listaestensioni'] = dict()
-            myHashGlob['f_checkarchivio'] = dict()
-            myHashGlob['f_checkarchivio']['tot_dirs']=[]
-            myHashGlob['f_checkarchivio']['tot_files']=[]
-            myHashGlob['f_checkarchivio']['duplicatedfiles_dict']=dict()
-            myHashGlob['f_fixdate'] = dict()
-            myHashGlob['f_fixdate']['fixed'] = []
-            myHashGlob['f_fixdate']['skipped'] = []
-            myHashGlob['f_fixdate']['tot_files'] = []
-            myHashGlob['f_fixdate']['tot_dirs'] = []
-            myHashGlob['f_restore'] = dict()
-            myHashGlob['f_restore']['tot_dirs'] = []
-            myHashGlob['f_restore']['original-restored'] = []
-            myHashGlob['f_restore']['original-duplicated']=[]   
-            myHashGlob['f_restore']['non-original-restored'] = []
-            myHashGlob['f_restore']['non-original-duplicated']=[]   
-            myHashGlob['f_restore']['tot_files'] = []
-            myHashGlob['f_restore']['reading_error_files'] =[]          
-            myHashGlob['f_restore']['original-copyerrors']=[]            
-            myHashGlob['f_restore']['non-original-copyerrors']=[]
-            myHashGlob['f_restore']['error_files']=[]
-            myHashGlob['f_loadextension'] = dict()
-            myHashGlob['f_loadextension']['root_folder'] = []            
-            myHashGlob['f_loadextension']['extension_list'] = []            
+                logger.debug("Parametro letto nel file di configurazione #selectedfolder# " + str(match[1]))                        
+        myHashGlob['masterrepository_bin'] = myHashGlob['masterrepository']+"\\recycled-bin"
+        myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository']+"\\backup"
+        myHashGlob['masterrepository_work'] = myHashGlob['masterrepository']+"\\work-area"
+        myHashGlob['masterrepository_restore'] = myHashGlob['masterrepository']+"\\restoredfiles"
+        myHashGlob['masterrepository_originals'] = myHashGlob['masterrepository']+"\\foto_originali"
+        myHashGlob['masterrepository_lightroom'] = myHashGlob['masterrepository']+"\\from_export_lightroom"
+        myHashGlob['f_copia'] = dict()
+        myHashGlob['f_copia']['copied'] = []
+        myHashGlob['f_copia']['skipped'] = []
+        myHashGlob['f_copia']['file_errors'] = []            
+        myHashGlob['f_copia']['tot_files'] = []
+        myHashGlob['f_copia']['tot_dirs'] = []
+        myHashGlob['f_copia']['importdir_error'] = []
+        myHashGlob['f_listaestensioni'] = dict()
+        myHashGlob['f_checkarchivio'] = dict()
+        myHashGlob['f_checkarchivio']['tot_dirs']=[]
+        myHashGlob['f_checkarchivio']['tot_files']=[]
+        myHashGlob['f_checkarchivio']['duplicatedfiles_dict']=dict()
+        myHashGlob['f_fixdate'] = dict()
+        myHashGlob['f_fixdate']['fixed'] = []
+        myHashGlob['f_fixdate']['skipped'] = []
+        myHashGlob['f_fixdate']['tot_files'] = []
+        myHashGlob['f_fixdate']['tot_dirs'] = []
+        myHashGlob['f_restore'] = dict()
+        myHashGlob['f_restore']['tot_dirs'] = []
+        myHashGlob['f_restore']['original-restored'] = []
+        myHashGlob['f_restore']['original-duplicated']=[]   
+        myHashGlob['f_restore']['non-original-restored'] = []
+        myHashGlob['f_restore']['non-original-duplicated']=[]   
+        myHashGlob['f_restore']['tot_files'] = []
+        myHashGlob['f_restore']['reading_error_files'] =[]          
+        myHashGlob['f_restore']['original-copyerrors']=[]            
+        myHashGlob['f_restore']['non-original-copyerrors']=[]
+        myHashGlob['f_restore']['error_files']=[]
+        myHashGlob['f_loadextension'] = dict()
+        myHashGlob['f_loadextension']['root_folder'] = []            
+        myHashGlob['f_loadextension']['extension_list'] = []            
     return myHashGlob
 
 class PhotoManagerAppFrame(wx.Frame):
@@ -108,15 +106,17 @@ class PhotoManagerAppFrame(wx.Frame):
             self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
         if(os.path.exists("C:\\Users\\Davide\\PhotoManager")):
             self.basePath="C:\\Users\\Davide\\PhotoManager"
+        logger.debug('Path base impostato a %s ',self.basePath)            
         self.baseFile = "default.props"
-        logger.info("###PARAMETRO FILE BASE### " + self.basePath + "\\" + self.baseFile + "\n")
-        logger.info("###basePath PER AZIENDALE: C:\\Users\\Davide\\PhotoManager ###")
-        logger.info("###basePath PER PC CASA:   C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master ###\n")
+        logger.info("File configurazione principale: %s\\%s Path PC aziendale: C:\\Users\\Davide\\PhotoManager Path PC Casa: C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master" ,self.basePath,self.baseFile)
         self.globpropsHash = LoadPropertiesAndInitArchive(self.basePath, self.baseFile, ".masterrepository.conf")
-        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
-        logger.info("###PARAMETRI DI CONFIGURAZIONE###  \n" + str(self.globpropsHash))
-        self.importDirError = 0
-        self.copymode = 0
+        logger.debug("Dict Parametri di configurazione ")
+        for (k,v) in self.globpropsHash.items():
+            logger.debug("Chiave: %s Valore: %s",str(k),str(v))        
+        logger.info('Archivio Fotografie: %s',self.globpropsHash['masterrepository'])
+
+
+
         self.gauge = wx.Gauge(self, pos=(5, 640), size=(max_gauge_size, -1))
         self.gauge.SetRange(max_gauge_size)
         self.gauge.SetValue(0)
@@ -129,14 +129,10 @@ class PhotoManagerAppFrame(wx.Frame):
             self.workingDirList.SetPath(self.globpropsHash['selectedfolder'])
             self.workingDirList.SelectPath(self.globpropsHash['selectedfolder'], select=True)
         self.workingDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaWorkingDir)
-
-        
         self.archivioFotografie = wx.StaticText(self, label="Archivio Fotografie Master: " + self.globpropsHash['masterrepository'],pos=(5, 600))
-
-        self.directoryCorrente = wx.StaticText(self, label="Cartella Selezionata per Azioni sulla destra: " + self.globpropsHash['selectedfolder'],
-                                          pos=(5, 5))
-        self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",
-                                                    pos=(360, 30),size=(345,-1))
+        
+        self.directoryCorrente = wx.StaticText(self, label="Cartella Selezionata per Azioni sulla destra: " + self.globpropsHash['selectedfolder'],pos=(5, 5))
+        self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",pos=(360, 30),size=(345,-1))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
         self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 90),size=(345,-1))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
@@ -189,7 +185,7 @@ class PhotoManagerAppFrame(wx.Frame):
                     riepilogo+=p+' '+str(n)+'\n'
                     for v in self.globpropsHash[function][p]:                   
                         outputmessage+=str(n)+' >> '+v+'\n'
-                        logger.debug('****Funzione %s **** Parametro %s **** Valore %s',function,p,self.globpropsHash[function][p])
+                        logger.debug('****Funzione %s **** Parametro %s **** Valore %s',function,p,v)
                         n-=1
                     outputmessage+='\n'
         else:
@@ -204,7 +200,7 @@ class PhotoManagerAppFrame(wx.Frame):
             if str(k).startswith('f_'):
                 logger.debug('Funzione: %s',str(k))
                 for c in self.globpropsHash[k].keys():
-                    logger.debug('Nome Dict Da Cancellare [%s][%s] Valore da Cancellare  %s',str(k),str(c),str(self.globpropsHash[k][c]))
+                    logger.debug('Nome Dict Da Cancellare [%s][%s], Numero elementi da Cancellare  %s',str(k),str(c),str(len(self.globpropsHash[k][c])))
                     self.globpropsHash[k][c].clear()            
                     logger.debug('Dict Svuotato [%s][%s] Valore %s',str(k),str(c),str(self.globpropsHash[k][c]))
             else:
@@ -458,7 +454,6 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaCopiaFile(self, evt):
         self.CleanConfigFunction()
-        self.importDirError = 0
         self.CopiaFile(self.globpropsHash['selectedfolder'])
         self.gauge.SetValue(self.gauge.GetRange())
         self.outputWindow.SetValue(self.fileDictShow('f_copia'))
@@ -530,8 +525,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
                         dstfile = dstfolder + "\\" + md5filename + dstext
                         logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Destinazione individuata:> " + dstfile)
-                        self.copymode = self.modoCopia.GetSelection()
-                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <CopyMode:> " + str(self.copymode))
+                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <CopyMode:> " + str(self.destinazioneCopia.GetSelection()))
                         if not os.path.exists(self.globpropsHash['masterrepository_bin']):
                             os.makedirs(self.globpropsHash['masterrepository_bin'])
                             logger.debug("FOLDER_CESTINO_ARCHIVIO:" + self.globpropsHash['masterrepository_bin'])
@@ -546,13 +540,13 @@ class PhotoManagerAppFrame(wx.Frame):
                                     "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(
                                         file.path))
                                 self.globpropsHash['f_copia']['copied'].append(file.path)
-                                if self.copymode == 1:
+                                if self.modoCopia.GetSelection() == 1:
                                     try:
                                         shutil.move(srcfile, self.globpropsHash['masterrepository_bin'],
                                                     copy_function='copy2')
                                     except IOError as e:
                                         logger.error("<<ERRORE SPOSTAMENTO FILE:>>File: " + srcfile + " su " + dstfile)
-                                if self.copymode == 2:
+                                if self.modoCopia.GetSelection() == 2:
                                     try:
                                         send2trash(srcfile)
                                     except IOError as e:
@@ -561,13 +555,13 @@ class PhotoManagerAppFrame(wx.Frame):
                             except IOError as e:
                                 logger.error("<<ERRORE COPIA>>File: " + srcfile + " su " + dstfile)
                         else:
-                            if self.copymode == 1:
+                            if self.modoCopia.GetSelection() == 1:
                                 try:
                                     shutil.move(srcfile, self.globpropsHash['masterrepository_bin'],
                                                 copy_function='copy2')
                                 except IOError as e:
                                     logger.error("<<ERRORE SPOSTAMENTO FILE:>>File: " + srcfile + " su " + dstfile)
-                            if self.copymode == 2:
+                            if self.modoCopia.GetSelection() == 2:
                                 try:
                                     send2trash(srcfile)
                                 except IOError as e:
@@ -582,7 +576,6 @@ class PhotoManagerAppFrame(wx.Frame):
             logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
             dir_iterator.close()
         else:
-            self.importDirError = 1
             dlg = wx.MessageDialog(self, "Directory Import Inesistente", style=wx.ICON_ERROR,
                                    caption="Directory Import Inesistente")
             dlg.ShowModal()
@@ -595,6 +588,7 @@ if __name__ == '__main__':
     logger.addHandler(stdout)
     logger.setLevel(logging.DEBUG)
     logger.propagate = False    
+    logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
     framePrincipale = PhotoManagerAppFrame(None, "PhotoManager")
     PhotoManagerApp.MainLoop()
