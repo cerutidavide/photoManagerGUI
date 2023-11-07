@@ -64,6 +64,8 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
             myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository']+"\\backup"
             myHashGlob['masterrepository_work'] = myHashGlob['masterrepository']+"\\work-area"
             myHashGlob['masterrepository_restore'] = myHashGlob['masterrepository']+"\\restoredfiles"
+            myHashGlob['masterrepository_originals'] = myHashGlob['masterrepository']+"\\foto_originali"
+            myHashGlob['masterrepository_lightroom'] = myHashGlob['masterrepository']+"\\from_export_lightroom"
             myHashGlob['f_copia'] = dict()
             myHashGlob['f_copia']['copied'] = []
             myHashGlob['f_copia']['skipped'] = []
@@ -138,21 +140,24 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
         self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 90),size=(345,-1))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
+        self.destinazioneCopia = wx.RadioBox(self, label="Destinazione Copia:", majorDimension=2,
+                                    pos=(360, 120), size=(345, -1),
+                                    choices=["Originals", "Export Lightroom"])
         self.modoCopia = wx.RadioBox(self, label="Azione Su File IMPORTATI/SKIPPATI:", majorDimension=3,
-                                     pos=(360, 120), size=(345, -1),
-                                     choices=["nessuna azione", "cestino archivio", "cestino windows"])
+                                      pos=(360, 180), size=(345, -1),
+                                      choices=["nessuna azione", "cestino archivio", "cestino windows"])
         self.avviaCheckArchivio = wx.Button(self, label="Avvia Controllo Duplicati Cartella Selezionata", pos=(360, 55),size=(345,-1))
         self.avviaCheckArchivio.Bind(wx.EVT_BUTTON, self.AvviaCheckArchivio)
 
-        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Orario Cartella Selezionata", pos=(360, 180),size=(345,-1))
+        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Orario Cartella Selezionata", pos=(360, 240),size=(345,-1))
         self.avviaFixDateTime.Bind(wx.EVT_BUTTON, self.AvviaFixDateTime)
         self.modoFixData = wx.RadioBox(self, label="Attraversare Sotto Cartelle Sì/No", majorDimension=2,
-                                     pos=(360, 210), size=(345, -1),
+                                     pos=(360, 280), size=(345, -1),
                                      choices=["Sì", "No"])
-        self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 280),size=(345,-1))
+        self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 340),size=(345,-1))
         self.avviaRestore.Bind(wx.EVT_BUTTON, self.AvviaRestore)
 
-        self.esci = wx.Button(self, label="ESCI", pos=(360, 350), size=(345, -1))
+        self.esci = wx.Button(self, label="ESCI", pos=(360, 550), size=(345, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
 
         self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300),style=wx.TE_MULTILINE)        
@@ -265,7 +270,7 @@ class PhotoManagerAppFrame(wx.Frame):
     def Restore(self, dir="C:\\Users\\c333053\\TestImport", dirrecursion=False):
         if os.path.exists(dir):
             id_log_counter_dir = str(len(self.globpropsHash['f_restore']['tot_dirs']))
-            logger.info("<<<INIZIO CARTELLA %s >>>",dir)
+            logger.debug("<<<INIZIO CARTELLA %s >>>",dir)
             self.globpropsHash['f_restore']['tot_dirs'].append(dir)
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
@@ -274,7 +279,7 @@ class PhotoManagerAppFrame(wx.Frame):
                     self.Restore(file,True)
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_restore']['tot_files']))
-                    logger.info("FILE %s_%s %s <Inizio",id_log_counter_dir,id_log_counter,file.path)
+                    logger.debug("FILE %s_%s %s <Inizio",id_log_counter_dir,id_log_counter,file.path)
                     self.globpropsHash['f_restore']['tot_files'].append(file.path)
                     try: 
                         fmd5=open(file, "rb")
@@ -289,25 +294,17 @@ class PhotoManagerAppFrame(wx.Frame):
                             logger.debug("FILE %s_%s <Il file  %s non presenta la struttura di un file di backup ",id_log_counter_dir,id_log_counter,file.name)
                             calculated_md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()+pathlib.Path(file).suffix
                             read_md5filename=file.name
-
-
                         dstfolder=self.globpropsHash['masterrepository_restore'] +'\\'+self.globpropsHash['f_restore']['dstfolder'][0]
                         dstfolder_original=dstfolder+'\\originals\\'
                         dstfolder_non_original=dstfolder+'\\non_originals\\'
                         logger.debug("FOLDER Destinazione RESTORE %s ",dstfolder)
-                        if os.path.exists(dstfolder):
-                            pass
-                        else:
+                        if not os.path.exists(dstfolder):
                             os.makedirs(dstfolder)
                             logger.debug("FOLDER Destinazione RESTORE %s CREATA ",dstfolder)
-                        if os.path.exists(dstfolder_original):
-                            pass
-                        else:
+                        if not os.path.exists(dstfolder_original):
                             os.makedirs(dstfolder_original)
                             logger.debug("FOLDER Destinazione RESTORE %s CREATA ",dstfolder_original)
-                        if os.path.exists(dstfolder_non_original):
-                            pass
-                        else:
+                        if not os.path.exists(dstfolder_non_original):
                             os.makedirs(dstfolder_non_original)
                             logger.debug("FOLDER Destinazione RESTORE %s CREATA ",dstfolder_non_original)                                                        
                         logger.debug("FILE %s %s  <file name con md5 calcolato> %s <file name preso dal nomefile> %s ",str(id_log_counter_dir),str(id_log_counter),calculated_md5filename,read_md5filename)
@@ -319,6 +316,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                 if not(os.path.exists(dstfile)):
                                     shutil.copy2(file,dstfile)
                                     self.globpropsHash['f_restore']['original-restored'].append(dstfile)
+                                    logger.info('File RESTORATO DA COMPLETARE')
                                 else:    
                                     self.globpropsHash['f_restore']['original-duplicated'].append(file.path)
                             except IOError:
@@ -493,7 +491,11 @@ class PhotoManagerAppFrame(wx.Frame):
                             fmd5.close()
                             logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <è un file...> " + str(file.path)+" LO CHIUDO")
                         srcfile = os.fsdecode(file)
-                        dstroot = self.globpropsHash['masterrepository']
+                        logger.debug('Destinazione copia impostata su %s', self.destinazioneCopia.GetSelection())
+                        if self.destinazioneCopia.GetSelection()==0:
+                            dstroot = self.globpropsHash['masterrepository_originals']
+                        if self.destinazioneCopia.GetSelection()==1:
+                            dstroot = self.globpropsHash['masterrepository_lightroom']
                         dstcamerafolder = "ProduttoreNonNoto\\ModelloNonNoto"
                         dstmaker = 'ProduttoreNonNoto'
                         dstmodel = 'ModelloNonNoto'
@@ -591,7 +593,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False    
     PhotoManagerApp = wx.App()
     framePrincipale = PhotoManagerAppFrame(None, "PhotoManager")
