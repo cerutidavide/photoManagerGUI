@@ -80,6 +80,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_fixdate']['skipped'] = []
         myHashGlob['f_fixdate']['tot_files'] = []
         myHashGlob['f_fixdate']['tot_dirs'] = []
+        myHashGlob['f_fixdate']['dstfolder'] = []
         myHashGlob['f_restore'] = dict()
         myHashGlob['f_restore']['tot_dirs'] = []
         myHashGlob['f_restore']['original-restored'] = []
@@ -91,6 +92,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_restore']['original-copyerrors']=[]            
         myHashGlob['f_restore']['non-original-copyerrors']=[]
         myHashGlob['f_restore']['error_files']=[]
+        myHashGlob['f_restore']['dstfolder'] = []
         myHashGlob['f_loadextension'] = dict()
         myHashGlob['f_loadextension']['root_folder'] = []            
         myHashGlob['f_loadextension']['extension_list'] = []            
@@ -274,8 +276,8 @@ class PhotoManagerAppFrame(wx.Frame):
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
                 if file.is_dir():
-                    logger.debug("DIRECTORY %s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,str(file.path))
-                    self.Restore(file,True)
+                    logger.debug("DIRECTORY %s <ATTRAVERSO LA DIRECTORY> %s",id_log_counter_dir,file.path)
+                    self.Restore(file.path,True)
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_restore']['tot_files']))
                     logger.debug("FILE %s_%s %s <Inizio",id_log_counter_dir,id_log_counter,file.path)
@@ -348,6 +350,7 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def AvviaFixDateTime(self, evt):        
         self.CleanConfigFunction()
+        self.globpropsHash['f_fixdate']['dstfolder']=[self.fileTS()]
         self.FixDateTime(self.globpropsHash['selectedfolder'],False)
         self.gauge.SetValue(self.gauge.GetRange())
         self.outputWindow.SetValue(self.fileDictShow('f_fixdate'))
@@ -371,7 +374,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.FixDateTime(str(file.path),True)                                      
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
-                    logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
+                    logger.debug("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     with exiftool.ExifTool() as et:
                         #Al momento fisso a -7 ore
                         deltaDateTime='00:00:00 07:00:00'
@@ -381,9 +384,14 @@ class PhotoManagerAppFrame(wx.Frame):
                         logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
                         try:
                             et.execute(exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar,file.path)                            
-                            srcbckfullfilename=str(file.path)+'_original'                            
-                            dstbckfilename=str(file.name)+'_original'                            
-                            dstbckfoldername=self.globpropsHash['masterrepository_bak']
+                            srcbckfullfilename=file.path+'_original'                            
+                            dstbckfilename=file.name+'_original'                            
+                            dstbckfoldername=self.globpropsHash['masterrepository_bak']+'\\'+self.globpropsHash['f_fixdate']['dstfolder'][0]
+
+
+
+
+
                             dstbckfullfilename=dstbckfoldername+'\\'+str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'+dstbckfilename                            
                             logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
                             logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout).replace('\n',''))
@@ -395,6 +403,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                 if not os.path.exists(dstbckfoldername):
                                     os.makedirs(dstbckfoldername)
                                 shutil.move(srcbckfullfilename, dstbckfullfilename,copy_function='copy2')    
+                                logger.info("FILE %s_%s <Data-Ora Aggiornata> %s",id_log_counter_dir,id_log_counter, file.path)
                             else:
                                 logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ",str(file.path)) 
                                 self.globpropsHash['f_fixdate']['skipped'].append(str(file.path))        
@@ -466,7 +475,7 @@ class PhotoManagerAppFrame(wx.Frame):
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport"):
         id_log_counter_dir =len(self.globpropsHash['f_copia']['tot_dirs'])
         if os.path.exists(dir):
-            logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<INIZIO CARTELLA>>>")
+            logger.info("FILE %s <Apertura Cartella> %s",id_log_counter_dir,dir)
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
                 id_log_counter_file =len(self.globpropsHash['f_copia']['tot_files'])
@@ -474,7 +483,7 @@ class PhotoManagerAppFrame(wx.Frame):
                     self.globpropsHash['f_copia']['tot_dirs'].append(file.path)
                     logger.debug("FILE " + str(id_log_counter_dir) + "_" + str(
                         id_log_counter_file) + " <è una directory> " + file.path)
-                    self.CopiaFile(file)
+                    self.CopiaFile(file.path)
                 else:
                     logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter_file) + " <INIZIO> " + str(file.path))
                     logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <è un file...> " + str(file.path)+" LO APRO")
@@ -572,7 +581,7 @@ class PhotoManagerAppFrame(wx.Frame):
                     except:
                         logger.info('Errore nell \'apertura del file %s',file.path)   
                         self.globpropsHash['f_copia']['file_errors'].append(file.path)     
-            logger.info("<<<"+str(dir)+">>> "+str(id_log_counter_dir)+" <<<FINE CARTELLA>>>")
+            logger.info("FILE %s <Chiusura Cartella> %s",id_log_counter_dir,dir)
             dir_iterator.close()
         else:
             dlg = wx.MessageDialog(self, "Directory Import Inesistente", style=wx.ICON_ERROR,
