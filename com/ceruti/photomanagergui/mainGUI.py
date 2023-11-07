@@ -100,8 +100,18 @@ class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title, *args, **kw):
         super().__init__(*args, **kw)
         wx.Panel.__init__(self, parent, title=title, size=(725, 700))
+
+        # sizer = wx.BoxSizer(wx.VERTICAL)
+        # sizer.Add(wx.Button(self, -1, 'An extremely long button text'), 0, 0, 0)
+        # sizer.Add(wx.Button(self, -1, 'Small button'), 0, 0, 0)
+        # sizer.
+        # self.SetSizer(sizer)
+
+
+
+
+
         max_gauge_size = 700
-        self.checkRunning = True
         if(os.path.exists("C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master")):
             self.basePath="C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
         if(os.path.exists("C:\\Users\\Davide\\PhotoManager")):
@@ -114,9 +124,6 @@ class PhotoManagerAppFrame(wx.Frame):
         for (k,v) in self.globpropsHash.items():
             logger.debug("Chiave: %s Valore: %s",str(k),str(v))        
         logger.info('Archivio Fotografie: %s',self.globpropsHash['masterrepository'])
-
-
-
         self.gauge = wx.Gauge(self, pos=(5, 640), size=(max_gauge_size, -1))
         self.gauge.SetRange(max_gauge_size)
         self.gauge.SetValue(0)
@@ -130,7 +137,6 @@ class PhotoManagerAppFrame(wx.Frame):
             self.workingDirList.SelectPath(self.globpropsHash['selectedfolder'], select=True)
         self.workingDirList.Bind(wx.EVT_DIRCTRL_SELECTIONCHANGED, self.SelezionaWorkingDir)
         self.archivioFotografie = wx.StaticText(self, label="Archivio Fotografie Master: " + self.globpropsHash['masterrepository'],pos=(5, 600))
-        
         self.directoryCorrente = wx.StaticText(self, label="Cartella Selezionata per Azioni sulla destra: " + self.globpropsHash['selectedfolder'],pos=(5, 5))
         self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",pos=(360, 30),size=(345,-1))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
@@ -152,12 +158,9 @@ class PhotoManagerAppFrame(wx.Frame):
                                      choices=["Sì", "No"])
         self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 340),size=(345,-1))
         self.avviaRestore.Bind(wx.EVT_BUTTON, self.AvviaRestore)
-
         self.esci = wx.Button(self, label="ESCI", pos=(360, 550), size=(345, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
-
         self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300),style=wx.TE_MULTILINE)        
-        
         self.SetFocus()
         self.Center()
         self.Show(True)
@@ -165,9 +168,9 @@ class PhotoManagerAppFrame(wx.Frame):
     def fileDictShow(self,function='davide',shortFMT=False):
         outputmessage=''
         riepilogo=''
-        logger.debug('****Funzione**** da mostrare %s',function)        
+        logger.debug('Funzione da mostrare %s',function)        
         if function in self.globpropsHash.keys():
-            logger.debug('****Funzione**** definita %s',function)            
+            logger.debug('Funzione definita %s',function)            
             riepilogo='Funzione: '+function+'\n'
             for p in self.globpropsHash[function]:            
                 match=re.search('_dict',p)
@@ -415,7 +418,6 @@ class PhotoManagerAppFrame(wx.Frame):
         id_log_counter_dir = len(self.globpropsHash['f_checkarchivio']['tot_dirs'])
         self.gauge.SetValue(len(self.globpropsHash['f_checkarchivio']['tot_files']))
         if os.path.exists(dir):
-            logger.info("<<< %s >>> %s <<<INIZIO CARTELLA>>>",dir,id_log_counter_dir)
             dir_iterator=os.scandir(dir)
             for file in dir_iterator:
                 id_log_counter = len(self.globpropsHash['f_checkarchivio']['tot_files'])
@@ -423,7 +425,6 @@ class PhotoManagerAppFrame(wx.Frame):
                     logger.debug("FILE %s_%s <è una directory> %s",id_log_counter_dir,id_log_counter,str(file.path))                                        
                     self.CheckArchivio(str(file.path))
                 else:
-                    logger.info("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     logger.debug("FILE %s_%s  <APERTURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     try:
                         with open(file, "rb") as fmd5:
@@ -432,13 +433,12 @@ class PhotoManagerAppFrame(wx.Frame):
                             try:                            
                                 if md5filename not in self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict']:                                    
                                     self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]=[file.path]                            
-                                    logger.debug("FILE %s_%s <INSERIMENTO NUOVO> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]))
-                                else:
-                                    listvalue=self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]
-                                    listvalue.append(file.path)
-                                    logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO>: %s , Nuovo valore lista file per chiave: %s',id_log_counter_dir,id_log_counter,file.path,listvalue)
-                                    self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]=listvalue
-                                    logger.debug('FILE %s_%s <AGGIUNTA FILE DUPLICATO> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename])                                                    
+                                    logger.debug("FILE %s_%s <Inserimento nuovo file> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]))
+                                    logger.info("FILE %s_%s <Inserimento nuovo file> chiave: %s valore %s",id_log_counter_dir,id_log_counter,md5filename,str(self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename]))
+                                else:                                    
+                                    self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename].append(file.path)
+                                    logger.debug('FILE %s_%s <Aggiunto duplicato> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename])                                                    
+                                    logger.info('FILE %s_%s <Aggiunto duplicato> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename])                                                    
                             except KeyError:
                                 logger.error('ERRORE CHIAVE')
                             fmd5.close()
@@ -448,7 +448,7 @@ class PhotoManagerAppFrame(wx.Frame):
                     self.globpropsHash['f_checkarchivio']['tot_files'].append(file.path)
                     self.gauge.SetValue(len(self.globpropsHash['f_checkarchivio']['tot_files']))
             dir_iterator.close()
-            logger.info("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
+            logger.debug("<<< %s >>> %s <<<FINE CARTELLA>>>",str(dir),id_log_counter_dir)
 
 
 
@@ -551,7 +551,6 @@ class PhotoManagerAppFrame(wx.Frame):
                                         send2trash(srcfile)
                                     except IOError as e:
                                         logger.error("<<ERRORE CESTINO:>>File: " + srcfile + "****" + str(e))
-
                             except IOError as e:
                                 logger.error("<<ERRORE COPIA>>File: " + srcfile + " su " + dstfile)
                         else:
@@ -586,7 +585,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.propagate = False    
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
