@@ -320,8 +320,8 @@ class PhotoManagerAppFrame(wx.Frame):
                                     logger.info('File RESTORATO DA COMPLETARE')
                                 else:    
                                     self.globpropsHash['f_restore']['original-duplicated'].append(file.path)
-                            except IOError:
-                                logger.error("FILE %s %s  <Problemi nell'estrazione del file %s ",str(id_log_counter_dir),str(id_log_counter),file.path) 
+                            except IOError as eio:
+                                logger.error("FILE %s %s  <Problemi nell'estrazione del file %s errore: %s",str(id_log_counter_dir),str(id_log_counter),file.path,str(eio)) 
                                 self.globpropsHash['f_restore']['original-copyerrors'].append(file.path)
                         else:
                             dstfile=dstfolder_non_original+calculated_md5filename
@@ -331,8 +331,8 @@ class PhotoManagerAppFrame(wx.Frame):
                                     self.globpropsHash['f_restore']['non-original-restored'].append(dstfile)
                                 else:
                                     self.globpropsHash['f_restore']['non-original-duplicated'].append(file.path)
-                            except IOError:
-                                logger.error("FILE %s %s  <Problemi nella copia del file %s ",str(id_log_counter_dir),str(id_log_counter),file.path)                             
+                            except IOError as eio:
+                                logger.error("FILE %s %s  <Problemi nella copia del file %s errore: %s",str(id_log_counter_dir),str(id_log_counter),file.path,str(eio))                             
                                 self.globpropsHash['f_restore']['non-original-copyerrors'].append(file.path)
                             logger.debug("FILE %s %s  <MD5 NO MATCH per il file %s ",str(id_log_counter_dir),str(id_log_counter),file.name)                                                        
                             logger.info("FILE %s %s  <FILE CON METADATI MODIFICATI RISPETTO AL FILE ORIGINALE DA RESTORARE %s ",str(id_log_counter_dir),str(id_log_counter),file.path) 
@@ -376,7 +376,7 @@ class PhotoManagerAppFrame(wx.Frame):
                     id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
                     logger.debug("FILE %s_%s <INIZIO> %s",id_log_counter_dir,id_log_counter, file.path)
                     with exiftool.ExifTool() as et:
-                        #Al momento fisso a -7 ore
+                        #Al momento fisso a +7 ore
                         deltaDateTime='00:00:00 07:00:00'
                         exiftoolModDatePar='-ModifyDate+=\"'+deltaDateTime+'\"'
                         exiftoolCreateDatePar='-CreateDate+=\"'+deltaDateTime+'\"'
@@ -387,11 +387,6 @@ class PhotoManagerAppFrame(wx.Frame):
                             srcbckfullfilename=file.path+'_original'                            
                             dstbckfilename=file.name+'_original'                            
                             dstbckfoldername=self.globpropsHash['masterrepository_bak']+'\\'+self.globpropsHash['f_fixdate']['dstfolder'][0]
-
-
-
-
-
                             dstbckfullfilename=dstbckfoldername+'\\'+str(datetime.now()).replace(' ','_').replace(':','_').replace('-','_')+'_'+dstbckfilename                            
                             logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ",id_log_counter_dir,id_log_counter,exiftoolModDatePar,exiftoolCreateDatePar,exiftoolOrigDatePar)
                             logger.debug("FILE %s_%s <STDOUT CMD EXIFTOOL %s > ",id_log_counter_dir,id_log_counter,str(et.last_stdout).replace('\n',''))
@@ -448,11 +443,11 @@ class PhotoManagerAppFrame(wx.Frame):
                                     self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename].append(file.path)
                                     logger.debug('FILE %s_%s <Aggiunto duplicato> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename])                                                    
                                     logger.info('FILE %s_%s <Aggiunto duplicato> <k,v> chiave: %s, valore: %s',id_log_counter_dir,id_log_counter,md5filename, self.globpropsHash['f_checkarchivio']['duplicatedfiles_dict'][md5filename])                                                    
-                            except KeyError:
-                                logger.error('ERRORE CHIAVE')
+                            except KeyError as ke:
+                                logger.error('ERRORE CHIAVE errore: %s',str(ke))
                             fmd5.close()
-                    except IOError:
-                        logger.error('ERRORE FILE')                        
+                    except IOError as eio:
+                        logger.error('ERRORE FILE errore %s',str(eio))                        
                     logger.debug("FILE %s_%s <CHIUSURA FILE> %s",id_log_counter_dir,id_log_counter, str(file.path))
                     self.globpropsHash['f_checkarchivio']['tot_files'].append(file.path)
                     self.gauge.SetValue(len(self.globpropsHash['f_checkarchivio']['tot_files']))
@@ -471,7 +466,6 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
 
-
     def CopiaFile(self, dir="C:\\Users\\c333053\\TestImport"):
         id_log_counter_dir =len(self.globpropsHash['f_copia']['tot_dirs'])
         if os.path.exists(dir):
@@ -481,19 +475,17 @@ class PhotoManagerAppFrame(wx.Frame):
                 id_log_counter_file =len(self.globpropsHash['f_copia']['tot_files'])
                 if file.is_dir():
                     self.globpropsHash['f_copia']['tot_dirs'].append(file.path)
-                    logger.debug("FILE " + str(id_log_counter_dir) + "_" + str(
-                        id_log_counter_file) + " <è una directory> " + file.path)
+                    logger.debug("FILE %s_ <è una directory> %s",str(id_log_counter_dir),file.path)
                     self.CopiaFile(file.path)
-                else:
-                    logger.info("FILE " + str(id_log_counter_dir)+"_"+str(id_log_counter_file) + " <INIZIO> " + str(file.path))
-                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <è un file...> " + str(file.path)+" LO APRO")
+                else:                    
+                    logger.debug("FILE %s_%s <è un file> %s Lo apro",str(id_log_counter_dir),str(id_log_counter_file),file.path)
                     self.globpropsHash['f_copia']['tot_files'].append(file.path)
                     try:
                         with open(file, "rb") as fmd5:
                             md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
-                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <md5 calcolato> " + md5filename)
+                            logger.debug("FILE %s_%s <md5 calcolato> %s",str(id_log_counter_dir),str(id_log_counter_file),md5filename)
                             fmd5.close()
-                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <è un file...> " + str(file.path)+" LO CHIUDO")
+                            logger.debug("FILE %s_%s <è un file> %s Lo chiudo",str(id_log_counter_dir),str(id_log_counter_file),file.path)
                         srcfile = os.fsdecode(file)
                         logger.debug('Destinazione copia impostata su %s', self.destinazioneCopia.GetSelection())
                         if self.destinazioneCopia.GetSelection()==0:
@@ -510,77 +502,71 @@ class PhotoManagerAppFrame(wx.Frame):
                             with Image.open(pathlib.Path(file)) as image:
                                 info = image.getexif()
                                 if info:
-                                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <ha EXIF TAGS>")
+                                    logger.debug("FILE %s_%s <ha exif tags> %s ",str(id_log_counter_dir),str(id_log_counter_file),file.path)
                                     for (tag, value) in info.items():
                                         decoded = TAGS.get(tag, tag)
-                                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <EXIF_TAG:> " + str(tag) + " DECODED_TAG " + str(
-                                            TAGS.get(tag, tag)) + " TAG_VALUE: " + str(info[tag]))
+                                        logger.debug("FILE %s_%s <EXIF_TAG> %s <DECODED_TAG> %s TAG_VALUE: ",str(id_log_counter_dir),str(id_log_counter_file),str(tag),TAGS.get(tag, tag)),str(info[tag])
                                         if decoded == 'DateTime':
-                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Anno/Mese da DataFile:> " + dstyearfolder + "/" + dstmonthfolder)
+                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",str(id_log_counter_dir),str(id_log_counter_file),dstyearfolder,dstmonthfolder)
                                             dstyearfolder = time.strftime("%Y",time.strptime(value,"%Y:%m:%d %H:%M:%S"))
                                             dstmonthfolder = time.strftime("%m", time.strptime(value,"%Y:%m:%d %H:%M:%S"))
-                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Anno/Mese da ExifFile:> " + dstyearfolder + "/" + dstmonthfolder)
+                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",str(id_log_counter_dir),str(id_log_counter_file),dstyearfolder,dstmonthfolder)
                                         if decoded == 'Make' and value != '':
                                             dstmaker = value.strip().replace(' ', '')
                                             dstcamerafolder = dstmaker
-                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <PRODUTTORE:> " + dstmaker)
+                                            logger.debug("FILE %s_%s <PRODUTTORE:> %s",str(id_log_counter_dir),str(id_log_counter_file),dstmaker)
                                         if decoded == 'Model' and value != '':
                                             dstmodel = value.strip().replace(' ', '-')
-                                            logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <MODELLO:> " + dstmodel)
+                                            logger.debug("FILE %s_%s <MODELLO:> %s",str(id_log_counter_dir),str(id_log_counter_file),dstmodel)
                                     dstcamerafolder = dstmaker + "\\" + dstmodel
-                                    logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <FOTOCAMERA:> " + dstcamerafolder)
-                        except UnidentifiedImageError:
-                            logger.error("Immagine Non identificata")
+                                    logger.debug("FILE %s_%s <FOTOCAMERA:> %s",str(id_log_counter_dir),str(id_log_counter_file),dstcamerafolder)
+                        except UnidentifiedImageError as ime:
+                            logger.error("Immagine Non identificata %s errore: %s",file.path,str(ime))
                         dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
                         dstfile = dstfolder + "\\" + md5filename + dstext
-                        logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <Destinazione individuata:> " + dstfile)
-                        logger.debug("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <CopyMode:> " + str(self.destinazioneCopia.GetSelection()))
+                        logger.debug("FILE %s_%s <Destinazione individuata:> %s",str(id_log_counter_dir),str(id_log_counter_file),dstfile)
+                        logger.debug("FILE %s_%s <CopyMode:> %s",str(id_log_counter_dir),str(id_log_counter_file),str(self.destinazioneCopia.GetSelection()))
                         if not os.path.exists(self.globpropsHash['masterrepository_bin']):
                             os.makedirs(self.globpropsHash['masterrepository_bin'])
-                            logger.debug("FOLDER_CESTINO_ARCHIVIO:" + self.globpropsHash['masterrepository_bin'])
+                            logger.debug("FOLDER_CESTINO_ARCHIVIO: %s",self.globpropsHash['masterrepository_bin'])
                         if not os.path.exists(dstfolder):
                             os.makedirs(dstfolder)
                         if not os.path.exists(dstfile):
-                            logger.debug("File: " + dstfile + " Non Esiste, lo copio")
+                            logger.debug("File: %s Non Esiste, lo copio",dstfile)
                             try:
                                 shutil.copy2(srcfile, dstfile, follow_symlinks=False)
-                                logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <<COPIATO File:> " + srcfile + " su " + dstfile)
-                                logger.info(
-                                    "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(
-                                        file.path))
+                                logger.info("FILE %s_%s <File Copiato> %s su %s",str(id_log_counter_dir),str(id_log_counter_file),srcfile,dstfile)
                                 self.globpropsHash['f_copia']['copied'].append(file.path)
                                 if self.modoCopia.GetSelection() == 1:
                                     try:
                                         shutil.move(srcfile, self.globpropsHash['masterrepository_bin'],
                                                     copy_function='copy2')
                                     except IOError as e:
-                                        logger.error("<<ERRORE SPOSTAMENTO FILE:>>File: " + srcfile + " su " + dstfile)
+                                        logger.error("<<ERRORE SPOSTAMENTO FILE:>>File: %s su %s errore: %s",srcfile,dstfile,str(e))
                                 if self.modoCopia.GetSelection() == 2:
                                     try:
                                         send2trash(srcfile)
                                     except IOError as e:
-                                        logger.error("<<ERRORE CESTINO:>>File: " + srcfile + "****" + str(e))
+                                        logger.error("<<ERRORE CESTINO:>>File: %s errore: %s",srcfile,str(e))
                             except IOError as e:
-                                logger.error("<<ERRORE COPIA>>File: " + srcfile + " su " + dstfile)
+                                logger.error("<<ERRORE COPIA>>File: %s su %s errore: %s",srcfile,dstfile,str(e))
                         else:
                             if self.modoCopia.GetSelection() == 1:
                                 try:
                                     shutil.move(srcfile, self.globpropsHash['masterrepository_bin'],
                                                 copy_function='copy2')
                                 except IOError as e:
-                                    logger.error("<<ERRORE SPOSTAMENTO FILE:>>File: " + srcfile + " su " + dstfile)
+                                    logger.error("<<ERRORE SPOSTAMENTO>>File: %s su %s errore: %s",srcfile,dstfile,str(e))
                             if self.modoCopia.GetSelection() == 2:
                                 try:
                                     send2trash(srcfile)
                                 except IOError as e:
-                                    logger.error("<<ERRORE CESTINO:>>File: " + srcfile + "****" + str(e))
-                            logger.info("FILE "+str(id_log_counter_dir)+"_"+str(id_log_counter_file)+" <<SKIPPED File:>" + srcfile + " identico a " + md5filename + dstext)
-                            logger.info(
-                                "FILE " + str(id_log_counter_dir) + "_" + str(id_log_counter_file) + " <FINE> " + str(file.path))
+                                    logger.error("<<ERRORE CESTINO:>>File: %s errore: %s",srcfile,str(e))
+                            logger.info("FILE %s_%s <File Skipped> %s su %s",str(id_log_counter_dir),str(id_log_counter_file),srcfile,dstfile)
                             self.globpropsHash['f_copia']['skipped'].append(file.path)
-                    except:
-                        logger.info('Errore nell \'apertura del file %s',file.path)   
+                    except Exception as er:
                         self.globpropsHash['f_copia']['file_errors'].append(file.path)     
+                        logger.error('Errore nell \'apertura del file %s errore: %s',file.path,str(er))                           
             logger.info("FILE %s <Chiusura Cartella> %s",id_log_counter_dir,dir)
             dir_iterator.close()
         else:
