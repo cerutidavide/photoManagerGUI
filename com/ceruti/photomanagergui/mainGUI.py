@@ -101,6 +101,14 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_loadextension'] = dict()
         myHashGlob['f_loadextension']['root_folder'] = []
         myHashGlob['f_loadextension']['extension_list'] = []
+
+        myHashGlob['f_checkiforiginal'] = dict()
+        myHashGlob['f_checkiforiginal']['tot_dirs'] = []
+        myHashGlob['f_checkiforiginal']['tot_files'] = []
+        myHashGlob['f_checkiforiginal']['originals'] = []
+        myHashGlob['f_checkiforiginal']['not_originals'] = []
+
+
     return myHashGlob
 
 
@@ -170,6 +178,12 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 340),
                                       size=(345, -1))
         self.avviaRestore.Bind(wx.EVT_BUTTON, self.AvviaRestore)
+
+        self.avviaCheckIfOriginal = wx.Button(self, label="Avvia CheckIfOriginal", pos=(360, 390),
+                                      size=(345, -1))
+        self.avviaCheckIfOriginal.Bind(wx.EVT_BUTTON, self.AvviaCheckIfOriginal)
+
+
         self.esci = wx.Button(self, label="ESCI", pos=(360, 550), size=(345, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
         self.outputWindow = wx.TextCtrl(self, pos=(5, 280), size=(345, 300), style=wx.TE_MULTILINE)
@@ -660,14 +674,64 @@ class PhotoManagerAppFrame(wx.Frame):
                                    caption="Directory Import Inesistente")
             dlg.ShowModal()
 
+    def AvviaCheckIfOriginal(self, evt):
+        self.CleanConfigFunction()
+        self.CheckIfOriginal(self.globpropsHash['selectedfolder'])
+        self.gauge.SetValue(self.gauge.GetRange())
+        self.outputWindow.SetValue(self.fileDictShow('f_checkiforiginal'))
+        okCheck = wx.MessageDialog(self, self.fileDictShow('f_checkiforiginal', True), style=wx.ICON_INFORMATION,
+                                   caption="Check Terminato")
+        okCheck.ShowModal()
+        self.gauge.SetValue(0)
+        self.CleanConfigFunction()
 
+    def CheckIfOriginal(self, dir="C:\\Users\\c333053\\TestImport"):
+        self.globpropsHash['f_checkiforiginal']['tot_dirs'].append(dir)
+        id_log_counter_dir = len(self.globpropsHash['f_checkiforiginal']['tot_dirs'])
+
+        if os.path.exists(dir):
+            dir_iterator = os.scandir(dir)
+            for file in dir_iterator:
+                if file.is_dir():
+                    logger.debug("FILE %s_ <è una directory> %s", id_log_counter_dir, str(file.path))
+                    self.CheckIfOriginal(str(file.path))
+                else:
+                    id_log_counter_file = len(self.globpropsHash['f_checkiforiginal']['tot_files'])
+                    self.gauge.SetValue(len(self.globpropsHash['f_checkiforiginal']['tot_files']))
+                    logger.debug("FILE %s_%s  <APERTURA FILE> %s", id_log_counter_dir, id_log_counter_file, str(file.path))
+                    try:
+                        with open(file, "rb") as fmd5:
+                            md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
+                            
+                            logger.debug("FILE %s_%s <md5 calcolato> %s", id_log_counter_dir, id_log_counter_file,
+                                         md5filename)
+                            ext = pathlib.Path(file).suffix
+                            logger.debug("FILE %s_%s <extension calcolato> %s", id_log_counter_dir, id_log_counter_file,
+                                         ext)                            
+                            if file.name==(md5filename+ext):
+                                self.globpropsHash['f_checkiforiginal']['originals'].append(file.path)
+                                logger.debug('FILE %s_%s <Inserito nuovo file nella lista originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
+                                logger.info('FILE %s_%s <Inserito nuovo file nella lista originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
+                            else:
+                                self.globpropsHash['f_checkiforiginal']['not_originals'].append(file.path)
+                                logger.debug('FILE %s_%s <Inserito nuovo file nella lista NOT-originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
+                                logger.info('FILE %s_%s <Inserito nuovo file nella lista NOT-originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
+                            fmd5.close()
+                            self.globpropsHash['f_checkiforiginal']['tot_files'].append(file.path)
+                    except IOError as eio:
+                        logger.error('ERRORE FILE errore %s', str(eio))
+                    logger.debug("FILE %s_%s <CHIUSURA FILE> %s", id_log_counter_dir, id_log_counter_file, str(file.path))                    
+                    self.gauge.SetValue(len(self.globpropsHash['f_checkarchivio']['tot_files']))
+            dir_iterator.close()
+            logger.debug("<<< %s >>> %s <<<FINE CARTELLA>>>", str(dir), id_log_counter_dir)
+            
 if __name__ == '__main__':
     logger = logging.getLogger('photoark')
     stdout = logging.StreamHandler()
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.ERROR)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
