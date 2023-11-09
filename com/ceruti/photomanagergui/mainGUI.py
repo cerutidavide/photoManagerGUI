@@ -26,8 +26,9 @@ from send2trash import send2trash
 # ATTENZIONE se recycled_bin è incluso nel folder che sto processando con fixdate--LOOP INFINITO
 # ATTENZIONE se restored è incluso nel backup stesso problema
 # IMPOSTARE folder validi restore e backup ?
+# TODO potrebbe avere senso salvare lista immagini non riconosciute
 
-# TODO NOTA BENE: _original troppe volte rende i file inaccessibili
+# TODO folder destinazione con il giorno
 # TODO FORMATTAZIONE LOG
 # TODO gestione immagini non riconosciute con Exiftool
 # TODO valutare "con e senza exif tool"
@@ -497,6 +498,8 @@ class PhotoManagerAppFrame(wx.Frame):
                         dstmodel = 'ModelloNonNoto'
                         dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
                         dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
+                        dstdayfolder = time.strftime("%d", time.gmtime(os.path.getmtime(file)))
+                        logger.debug('Cartella Giorno: day: %s',dstdayfolder)
                         dstext = os.path.splitext(file)[1].lower()
                         try:
                             with Image.open(pathlib.Path(file)) as image:
@@ -510,6 +513,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                             logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",str(id_log_counter_dir),str(id_log_counter_file),dstyearfolder,dstmonthfolder)
                                             dstyearfolder = time.strftime("%Y",time.strptime(value,"%Y:%m:%d %H:%M:%S"))
                                             dstmonthfolder = time.strftime("%m", time.strptime(value,"%Y:%m:%d %H:%M:%S"))
+                                            dstdayfolder = time.strftime("%d", time.strptime(value,"%Y:%m:%d %H:%M:%S"))
                                             logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",str(id_log_counter_dir),str(id_log_counter_file),dstyearfolder,dstmonthfolder)
                                         if decoded == 'Make' and value != '':
                                             dstmaker = value.strip().replace(' ', '')
@@ -522,7 +526,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                     logger.debug("FILE %s_%s <FOTOCAMERA:> %s",str(id_log_counter_dir),str(id_log_counter_file),dstcamerafolder)
                         except UnidentifiedImageError as ime:
                             logger.error("Immagine Non identificata %s errore: %s",file.path,str(ime))
-                        dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder
+                        dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder + "\\" + dstdayfolder
                         dstfile = dstfolder + "\\" + md5filename + dstext
                         logger.debug("FILE %s_%s <Destinazione individuata:> %s",str(id_log_counter_dir),str(id_log_counter_file),dstfile)
                         logger.debug("FILE %s_%s <CopyMode:> %s",str(id_log_counter_dir),str(id_log_counter_file),str(self.destinazioneCopia.GetSelection()))
@@ -580,7 +584,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False    
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
