@@ -25,13 +25,9 @@ from send2trash import send2trash
 #   esempio >exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
 #   exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
 
-# ATTENZIONE se recycled_bin è incluso nel folder che sto processando con fixdate--LOOP INFINITO
-# ATTENZIONE se restored è incluso nel backup stesso problema
-# IMPOSTARE folder validi restore e backup ?
+# TODO SCANDIR con file che si modificano non funziona-->creare lista statica di file da processare con Exiftool!!!!!!
+# TODO CHECK APERTURA FILE IN LETTURA O SCRITTURA!!!!
 # TODO potrebbe avere senso salvare lista immagini non riconosciute
-
-# TODO folder destinazione con il giorno
-# TODO FORMATTAZIONE LOG
 # TODO gestione immagini non riconosciute con Exiftool
 # TODO valutare "con e senza exif tool"
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
@@ -42,7 +38,7 @@ from send2trash import send2trash
 # TODO valutare refactor "a oggetti" con vari moduli
 # TODO Impacchettare appliczione
 # TODO valutare/verificare multiplatform
-# provare a pensare "immagini simili" e.g.  librerie AI di analisi immagini...
+# TODO provare a pensare "immagini simili" e.g.  librerie AI di analisi immagini...
 
 def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                                  filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
@@ -731,7 +727,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
