@@ -86,6 +86,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_fixdate']['tot_files'] = []
         myHashGlob['f_fixdate']['tot_dirs'] = []
         myHashGlob['f_fixdate']['dstfolder'] = []
+        myHashGlob['f_fixdate']['filelist'] = []
         myHashGlob['f_restore'] = dict()
         myHashGlob['f_restore']['tot_dirs'] = []
         myHashGlob['f_restore']['original-restored'] = []
@@ -107,6 +108,12 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_checkiforiginal']['tot_files'] = []
         myHashGlob['f_checkiforiginal']['originals'] = []
         myHashGlob['f_checkiforiginal']['not_originals'] = []
+
+        myHashGlob['f_crealista'] = dict()
+        myHashGlob['f_crealista']['tot_files'] = []
+        myHashGlob['f_crealista']['tot_dirs'] = []
+        
+
 
 
     return myHashGlob
@@ -393,11 +400,34 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.globpropsHash['f_restore']['reading_error_files'].append(file.path)
             dir_iterator.close()
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>", dir)
+    def creaListaFile(self,dir='c:\\temp\\',walkDir=True,function='f_fixdate'):
+        if os.path.exists(dir):
+            id_log_counter_dir=str(len(self.globpropsHash[function]['tot_dirs']))
+            dir_iterator = os.scandir(dir)
+            for file in dir_iterator:
+                if file.is_dir():
+                    logger.debug('DirEntry %s è una directory: %s',id_log_counter_dir,file.path)
+                    if walkDir == False:
+                        logger.debug("DIRECTORY %s <NON ATTRAVERSO LA DIRECTORY> %s", id_log_counter_dir,
+                                     file.path)
+                    else:
+                        logger.debug("DIRECTORY %s <ATTRAVERSO LA DIRECTORY> %s", id_log_counter_dir, file.path)
+                        self.globpropsHash[function]['tot_dirs'].append(file.path)
+                        self.creaListaFile(file.path, True,function)
+                        logger.debug("DIRECTORY %s_ %s Aggiunta", id_log_counter_dir, file.path)
+ 
+                else:
+                    id_log_counter = str(len(self.globpropsHash['f_crealista']['tot_files']))
+                    logger.debug("FILE %s_%s Trovato:  %s", id_log_counter_dir, id_log_counter, file.path)
+                    self.globpropsHash[function]['filelist'].append(file.path)
+                    logger.info("FILE %s_%s <-> %s Aggiunto", id_log_counter_dir, id_log_counter, file.path)
 
+        
     def AvviaFixDateTime(self, evt):
         self.CleanConfigFunction()
         self.globpropsHash['f_fixdate']['dstfolder'] = [self.fileTS()]
-        self.FixDateTime(self.globpropsHash['selectedfolder'], False)
+        self.creaListaFile(self.globpropsHash['selectedfolder'],True,'f_fixdate')
+        #self.FixDateTime(self.globpropsHash['selectedfolder'], False)
         self.gauge.SetValue(self.gauge.GetRange())
         self.outputWindow.SetValue(self.fileDictShow('f_fixdate'))
         okCheck = wx.MessageDialog(self, self.fileDictShow('f_fixdate', True), style=wx.ICON_INFORMATION,
