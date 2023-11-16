@@ -28,7 +28,7 @@ from send2trash import send2trash
 
 # CREA LISTA trascura sempre tutti i file _original nella lista di file da trattare e ne crea una lista "da spostare" le altre procedure, prima di partire spostano i file con una procedura ad hoc che sposta i file _original sotto backup_timestamp aggiungeno n ad ogni copia del file con lo stesso nome
 
-# TODO NOTA BENE RESTORE DEVE CONSIDERARE _1  oltre al _original -->regexp
+
 # TODO SCANDIR con file che si modificano non funziona-->creare lista statica di file da processare con Exiftool!!!!!!
 # TODO CHECK APERTURA FILE IN LETTURA O SCRITTURA!!!!
 # TODO potrebbe avere senso salvare lista immagini non riconosciute
