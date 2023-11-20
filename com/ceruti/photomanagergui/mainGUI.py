@@ -16,6 +16,7 @@ from PIL import UnidentifiedImageError
 from PIL.ExifTags import TAGS
 from PIL.TiffTags import TAGS
 from send2trash import send2trash
+from pathvalidate import ValidationError, validate_filename, validate_filepath
 
 
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
@@ -63,6 +64,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                 myHashGlob['selectedfolder'] = match[1]
                 logger.debug("Parametro letto nel file di configurazione #selectedfolder# " + str(match[1]))
         myHashGlob['masterrepository_bin'] = myHashGlob['masterrepository'] + "\\recycled-bin"
+        myHashGlob['masterrepository_prob'] = myHashGlob['masterrepository'] + "\\destination_folder_problems"
         myHashGlob['masterrepository_bak'] = myHashGlob['masterrepository'] + "\\backup"
         myHashGlob['masterrepository_work'] = myHashGlob['masterrepository'] + "\\work-area"
         myHashGlob['masterrepository_restore'] = myHashGlob['masterrepository'] + "\\restoredfiles"
@@ -635,28 +637,49 @@ class PhotoManagerAppFrame(wx.Frame):
                                         logger.debug("FILE %s_%s <EXIF_TAG> %s <DECODED_TAG> %s TAG_VALUE: ",
                                                      str(id_log_counter_dir), str(id_log_counter_file), str(tag),
                                                      TAGS.get(tag, tag)), str(info[tag])
-                                        if decoded == 'DateTime':
-                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
-                                                         str(id_log_counter_dir), str(id_log_counter_file),
-                                                         dstyearfolder, dstmonthfolder)
-                                            dstyearfolder = time.strftime("%Y",
-                                                                          time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                            dstmonthfolder = time.strftime("%m",
-                                                                           time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                            dstdayfolder = time.strftime("%d",
-                                                                         time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
-                                                         str(id_log_counter_dir), str(id_log_counter_file),
-                                                         dstyearfolder, dstmonthfolder)
-                                        if decoded == 'Make' and value != '':
-                                            dstmaker = value.strip().replace(' ', '')
-                                            dstcamerafolder = dstmaker
-                                            logger.debug("FILE %s_%s <PRODUTTORE:> %s", str(id_log_counter_dir),
-                                                         str(id_log_counter_file), dstmaker)
-                                        if decoded == 'Model' and value != '':
-                                            dstmodel = value.strip().replace(' ', '-')
-                                            logger.debug("FILE %s_%s <MODELLO:> %s", str(id_log_counter_dir),
-                                                         str(id_log_counter_file), dstmodel)
+                                        try:
+                                            if decoded == 'DateTime':
+                                                logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                                             str(id_log_counter_dir), str(id_log_counter_file),
+                                                             dstyearfolder, dstmonthfolder)
+                                                dstyearfolder = time.strftime("%Y",
+                                                                              time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                                dstmonthfolder = time.strftime("%m",
+                                                                               time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                                dstdayfolder = time.strftime("%d",
+                                                                             time.strptime(value, "%Y:%m:%d %H:%M:%S"))
+                                                logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                                             str(id_log_counter_dir), str(id_log_counter_file),
+                                                             dstyearfolder, dstmonthfolder)
+                                        except ValueError as ver:
+                                            logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s', file.path,
+                                                         str(ver))
+                                            dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
+                                            dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
+                                            dstdayfolder = time.strftime("%d", time.gmtime(os.path.getmtime(file)))
+                                            logger.error('Valori di data destinazione ripristinati da nome file per il file  %s.',
+                                                         file.path)
+                                        try:
+                                            if decoded == 'Make' and value != '':
+                                                dstmaker = value.strip().replace(' ', '')
+                                                dstcamerafolder = dstmaker
+                                                logger.debug("FILE %s_%s <PRODUTTORE:> %s", str(id_log_counter_dir),
+                                                             str(id_log_counter_file), dstmaker)
+                                        except ValueError as verMaker:
+                                            dstmaker = 'ProduttoreNonNoto'
+                                            logger.error(
+                                                'Produttore reimpostato su non noto  per il file %s.',
+                                                file.path)
+                                        try:
+                                            if decoded == 'Model' and value != '':
+                                                dstmodel = value.strip().replace(' ', '-')
+                                                logger.debug("FILE %s_%s <MODELLO:> %s", str(id_log_counter_dir),
+                                                             str(id_log_counter_file), dstmodel)
+                                        except:
+                                            dstmodel = 'ModelloNonNoto'
+                                            logger.error(
+                                                'Modello  reimpostato su non noto  per il file %s.',
+                                                file.path)
                                     dstcamerafolder = dstmaker + "\\" + dstmodel
                                     logger.debug("FILE %s_%s <FOTOCAMERA:> %s", str(id_log_counter_dir),
                                                  str(id_log_counter_file), dstcamerafolder)
@@ -671,6 +694,15 @@ class PhotoManagerAppFrame(wx.Frame):
                         if not os.path.exists(self.globpropsHash['masterrepository_bin']):
                             os.makedirs(self.globpropsHash['masterrepository_bin'])
                             logger.debug("FOLDER_CESTINO_ARCHIVIO: %s", self.globpropsHash['masterrepository_bin'])
+                        [dstdrive,dstfile_nodrive]=os.path.splitdrive(dstfile)
+                        try:
+                            validate_filepath(dstfile_nodrive)
+                        except ValidationError as ev:
+                            logger.error("FILE %s_%s <La Destinazione individuata per il file:> %s ha un problema, lo sposto negli scarti", str(id_log_counter_dir),
+                                         str(id_log_counter_file),file.path )
+                            dstfolder=self.globpropsHash['masterrepository_prob']
+                            dstfile = dstfolder + "\\" + md5filename + dstext
+                            logger.error("******** DESTINAZIONE AGGIORNATA: ")
                         if not os.path.exists(dstfolder):
                             os.makedirs(dstfolder)
                         if not os.path.exists(dstfile):
@@ -712,7 +744,8 @@ class PhotoManagerAppFrame(wx.Frame):
                             self.globpropsHash['f_copia']['skipped'].append(file.path)
                     except Exception as er:
                         self.globpropsHash['f_copia']['file_errors'].append(file.path)
-                        logger.error('Errore nell \'apertura del file %s errore: %s', file.path, str(er))
+                        logger.error('Errore nell \'apertura del file %s errore: %s eccezione:', file.path, str(er))
+                        pass
             logger.info("FILE %s <Chiusura Cartella> %s", id_log_counter_dir, dir)
             dir_iterator.close()
         else:
@@ -777,7 +810,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
