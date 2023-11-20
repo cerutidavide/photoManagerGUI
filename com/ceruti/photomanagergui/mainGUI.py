@@ -635,10 +635,6 @@ class PhotoManagerAppFrame(wx.Frame):
                         logger.debug('Cartella Giorno: day: %s', dstdayfolder)
                         dstext = os.path.splitext(file)[1].lower()
                         try:
-
-
-
-
                             with open(pathlib.Path(file),'rb') as image_exif:
                                 if image_exif:
                                     logger.debug("FILE %s_%s <ha exif tags> %s ", str(id_log_counter_dir),
@@ -655,7 +651,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                     if originaldatetimetag in exif_tags.keys():
                                         originaldatetimevalue=str(exif_tags[originaldatetimetag])
                                         try:
-                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile <MODIFICA FILE>:> %s / %s ",
                                                           str(id_log_counter_dir), str(id_log_counter_file),
                                                          dstyearfolder, dstmonthfolder)
                                             dstyearfolder = time.strftime("%Y",
@@ -665,7 +661,7 @@ class PhotoManagerAppFrame(wx.Frame):
                                                                                          "%Y:%m:%d %H:%M:%S"))
                                             dstdayfolder = time.strftime("%d",
                                                                          time.strptime(originaldatetimevalue, "%Y:%m:%d %H:%M:%S"))
-                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile <DATETIME ORIGINAL>:> %s / %s ",
                                                          str(id_log_counter_dir), str(id_log_counter_file),
                                                          dstyearfolder, dstmonthfolder)
 
@@ -682,7 +678,12 @@ class PhotoManagerAppFrame(wx.Frame):
                                                     logger.debug('File %s MODIFIED',file.path)
                                                     self.globpropsHash['f_copia']['modified'].append(file.path)
                                                     dstroot = self.globpropsHash['masterrepository_modified']
-
+                                            else:
+                                                dstroot = self.globpropsHash['masterrepository_originals']
+                                                logger.debug("FILE %s_%s <Anno/Mese da DataFile <DATETIME ORIGINAL SENZA IMAGEMODIFY>:> %s / %s ",
+                                                         str(id_log_counter_dir), str(id_log_counter_file),
+                                                         dstyearfolder, dstmonthfolder)
+                                                self.globpropsHash['f_copia']['originals'].append(file.path)
                                         except ValueError as ver:
                                             logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s',
                                                          file.path,
@@ -695,8 +696,6 @@ class PhotoManagerAppFrame(wx.Frame):
                                                 file.path)
                                             self.globpropsHash['f_copia']['change_unknown'].append(file.path)
                                             logger.debug('File %s UNKNOWN CHANGE, but OriginalTAGS are present', file.path)
-
-
                                     else:
                                         if imagedatetimetag in exif_tags.keys():
                                             imagedatetimevalue=str(exif_tags[imagedatetimetag])
@@ -717,7 +716,6 @@ class PhotoManagerAppFrame(wx.Frame):
                                                 logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
                                                              str(id_log_counter_dir), str(id_log_counter_file),
                                                              dstyearfolder, dstmonthfolder)
-                                                #NON ESISTE ORIGINALE, ma per me è originale (una data sola)
                                                 self.globpropsHash['f_copia']['modified'].append(file.path)
 
                                             except ValueError as ver:
@@ -762,6 +760,8 @@ class PhotoManagerAppFrame(wx.Frame):
                                                  str(id_log_counter_file), dstcamerafolder)
                         except UnidentifiedImageError as ime:
                             logger.error("Immagine Non identificata %s errore: %s", file.path, str(ime))
+                        if dstroot==self.globpropsHash['masterrepository_unknown_changes']:
+                            self.globpropsHash['f_copia']['change_unknown'].append(file.path)
                         dstfolder = dstroot + "\\" + dstcamerafolder + "\\" + dstyearfolder + "\\" + dstmonthfolder + "\\" + dstdayfolder
                         dstfile = dstfolder + "\\" + md5filename + dstext
                         logger.debug("FILE %s_%s <Destinazione individuata:> %s", str(id_log_counter_dir),
