@@ -17,6 +17,7 @@ from PIL.ExifTags import TAGS
 from PIL.TiffTags import TAGS
 from send2trash import send2trash
 from pathvalidate import ValidationError, validate_filename, validate_filepath
+import exifread
 
 
 # NB per cambiare tra pc aziendale e di casa basta commentre/scommentare dove va in errore
@@ -69,14 +70,19 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['masterrepository_work'] = myHashGlob['masterrepository'] + "\\work-area"
         myHashGlob['masterrepository_restore'] = myHashGlob['masterrepository'] + "\\restoredfiles"
         myHashGlob['masterrepository_originals'] = myHashGlob['masterrepository'] + "\\foto_originali"
-        myHashGlob['masterrepository_lightroom'] = myHashGlob['masterrepository'] + "\\from_export_lightroom"
+        myHashGlob['masterrepository_modified'] = myHashGlob['masterrepository'] + "\\modified"
+        myHashGlob['masterrepository_unknown_changes'] = myHashGlob['masterrepository'] + "\\changes_unknown"
         myHashGlob['f_copia'] = dict()
         myHashGlob['f_copia']['copied'] = []
         myHashGlob['f_copia']['skipped'] = []
+        myHashGlob['f_copia']['originals'] = []
+        myHashGlob['f_copia']['modified'] = []
+        myHashGlob['f_copia']['change_unknown'] = []
         myHashGlob['f_copia']['file_errors'] = []
         myHashGlob['f_copia']['tot_files'] = []
         myHashGlob['f_copia']['tot_dirs'] = []
         myHashGlob['f_copia']['importdir_error'] = []
+
         myHashGlob['f_listaestensioni'] = dict()
         myHashGlob['f_checkarchivio'] = dict()
         myHashGlob['f_checkarchivio']['tot_dirs'] = []
@@ -89,7 +95,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_fixdate']['tot_dirs'] = []
         myHashGlob['f_fixdate']['dstfolder'] = []
         myHashGlob['f_fixdate']['filelist'] = []
-        myHashGlob['f_fixdate']['filelist_original']=[]
+        myHashGlob['f_fixdate']['filelist_original'] = []
         myHashGlob['f_restore'] = dict()
         myHashGlob['f_restore']['tot_dirs'] = []
         myHashGlob['f_restore']['original-restored'] = []
@@ -115,9 +121,6 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_crealista'] = dict()
         myHashGlob['f_crealista']['tot_files'] = []
         myHashGlob['f_crealista']['tot_dirs'] = []
-        
-
-
 
     return myHashGlob
 
@@ -190,9 +193,8 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaRestore.Bind(wx.EVT_BUTTON, self.AvviaRestore)
 
         self.avviaCheckIfOriginal = wx.Button(self, label="Avvia CheckIfOriginal", pos=(360, 390),
-                                      size=(345, -1))
+                                              size=(345, -1))
         self.avviaCheckIfOriginal.Bind(wx.EVT_BUTTON, self.AvviaCheckIfOriginal)
-
 
         self.esci = wx.Button(self, label="ESCI", pos=(360, 550), size=(345, -1))
         self.esci.Bind(wx.EVT_BUTTON, self.Esci)
@@ -369,10 +371,10 @@ class PhotoManagerAppFrame(wx.Frame):
                                 if not (os.path.exists(dstfile)):
                                     shutil.copy2(file, dstfile)
                                     self.globpropsHash['f_restore']['original-restored'].append(dstfile)
-                                    logger.info('File %s restorato su %s', file.path,dstfile)
+                                    logger.info('File %s restorato su %s', file.path, dstfile)
                                 else:
                                     self.globpropsHash['f_restore']['original-duplicated'].append(file.path)
-                                    logger.info('File %s duplicato inutile restorarea su %s', file.path,dstfile)
+                                    logger.info('File %s duplicato inutile restorarea su %s', file.path, dstfile)
                             except IOError as eio:
                                 logger.error("FILE %s %s  <Problemi nell'estrazione del file %s errore: %s",
                                              str(id_log_counter_dir), str(id_log_counter), file.path, str(eio))
@@ -404,38 +406,37 @@ class PhotoManagerAppFrame(wx.Frame):
                         self.globpropsHash['f_restore']['reading_error_files'].append(file.path)
             dir_iterator.close()
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>", dir)
-    
-    def creaListaFile(self,dir='c:\\temp\\',walkDir=True,function='f_fixdate'):
+
+    def creaListaFile(self, dir='c:\\temp\\', walkDir=True, function='f_fixdate'):
         if os.path.exists(dir):
-            id_log_counter_dir=str(len(self.globpropsHash['f_crealista']['tot_dirs']))
+            id_log_counter_dir = str(len(self.globpropsHash['f_crealista']['tot_dirs']))
             dir_iterator = os.scandir(dir)
             for file in dir_iterator:
                 if file.is_dir():
-                    logger.debug('DirEntry %s è una directory: %s',id_log_counter_dir,file.path)
+                    logger.debug('DirEntry %s è una directory: %s', id_log_counter_dir, file.path)
                     if walkDir == False:
                         logger.debug("DIRECTORY %s <NON ATTRAVERSO LA DIRECTORY> %s", id_log_counter_dir,
                                      file.path)
                     else:
                         logger.debug("DIRECTORY %s <ATTRAVERSO LA DIRECTORY> %s", id_log_counter_dir, file.path)
                         self.globpropsHash['f_crealista']['tot_dirs'].append(file.path)
-                        self.creaListaFile(file.path, True,function)
+                        self.creaListaFile(file.path, True, function)
                         logger.debug("DIRECTORY %s_ %s Aggiunta", id_log_counter_dir, file.path)
- 
+
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_crealista']['tot_files']))
                     logger.debug("FILE %s_%s Trovato:  %s", id_log_counter_dir, id_log_counter, file.path)
                     match = re.search('_original', pathlib.Path(file).suffix)
                     if match:
-                        logger.debug('File %s da saltare, ha estensione: %s',file.path, str(match[0]))     
+                        logger.debug('File %s da saltare, ha estensione: %s', file.path, str(match[0]))
                         self.globpropsHash[function]['filelist_original'].append(file.path)
                     else:
                         self.globpropsHash[function]['filelist'].append(file.path)
                         logger.info("FILE %s_%s <-> %s Aggiunto", id_log_counter_dir, id_log_counter, file.path)
 
-        
     def AvviaFixDateTime(self, evt):
         self.CleanConfigFunction()
-        self.globpropsHash['f_fixdate']['dstfolder'] = [self.fileTS()]        
+        self.globpropsHash['f_fixdate']['dstfolder'] = [self.fileTS()]
         self.FixDateTime(self.globpropsHash['selectedfolder'])
         self.gauge.SetValue(self.gauge.GetRange())
         self.outputWindow.SetValue(self.fileDictShow('f_fixdate'))
@@ -447,18 +448,18 @@ class PhotoManagerAppFrame(wx.Frame):
 
     def FixDateTime(self, dir="C:\\Users\\c333053\\TestImport"):
         self.fixmode = self.modoFixData.GetSelection()
-        if self.fixmode==0:
-            self.creaListaFile(self.globpropsHash['selectedfolder'],True,'f_fixdate')
+        if self.fixmode == 0:
+            self.creaListaFile(self.globpropsHash['selectedfolder'], True, 'f_fixdate')
         else:
-            self.creaListaFile(self.globpropsHash['selectedfolder'],False,'f_fixdate')
+            self.creaListaFile(self.globpropsHash['selectedfolder'], False, 'f_fixdate')
         if os.path.exists(dir):
             id_log_counter_dir = str(len(self.globpropsHash['f_fixdate']['tot_dirs']))
             logger.info("<<<INIZIO CARTELLA %s >>>", dir)
             self.globpropsHash['f_fixdate']['tot_dirs'].append(dir)
-            
+
             for file in self.globpropsHash['f_fixdate']['filelist']:
                 if os.path.isdir(file):
-                    logger.error('Trovato un file nella lista che invece è una directory %s', file)                        
+                    logger.error('Trovato un file nella lista che invece è una directory %s', file)
                 else:
                     id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
                     logger.debug("FILE %s_%s <INIZIO> %s", id_log_counter_dir, id_log_counter, file)
@@ -482,39 +483,46 @@ class PhotoManagerAppFrame(wx.Frame):
                                          str(et.last_status))
                             if et.last_status == 0 and et.last_stdout.rfind('unchanged') < 0:
                                 self.globpropsHash['f_fixdate']['fixed'].append(file)
-                                srcmvfullfilename=file+'_original'
-                                logger.debug('File sorgente da spostare: %s',srcmvfullfilename)
+                                srcmvfullfilename = file + '_original'
+                                logger.debug('File sorgente da spostare: %s', srcmvfullfilename)
                                 if os.path.exists(srcmvfullfilename):
                                     dstbckfilename = pathlib.Path(srcmvfullfilename).name
-                                    logger.debug('Nome file destinazione spostamento: %s',dstbckfilename)
-                                    dstbckfoldername = self.globpropsHash['masterrepository_bak'] + '\\'+self.globpropsHash['f_fixdate']['dstfolder'][0]
-                                    logger.debug('Nome Cartella destinazione spostamento: %s',dstbckfoldername)
+                                    logger.debug('Nome file destinazione spostamento: %s', dstbckfilename)
+                                    dstbckfoldername = self.globpropsHash['masterrepository_bak'] + '\\' + \
+                                                       self.globpropsHash['f_fixdate']['dstfolder'][0]
+                                    logger.debug('Nome Cartella destinazione spostamento: %s', dstbckfoldername)
                                     dstbckfullfilename = dstbckfoldername + '\\' + dstbckfilename
-                                    logger.debug('Nome Completo file destinazione spostamento: %s',dstbckfullfilename)
+                                    logger.debug('Nome Completo file destinazione spostamento: %s', dstbckfullfilename)
                                     if not os.path.exists(dstbckfoldername):
                                         os.makedirs(dstbckfoldername)
                                     try:
                                         if not os.path.exists(dstbckfullfilename):
                                             shutil.move(srcmvfullfilename, dstbckfullfilename, copy_function='copy2')
-                                            logger.info('File backup di Exiftool Spostato da qui: %s a qui: %s',srcmvfullfilename, dstbckfullfilename)
+                                            logger.info('File backup di Exiftool Spostato da qui: %s a qui: %s',
+                                                        srcmvfullfilename, dstbckfullfilename)
                                         else:
-                                            n=1
-                                            while n>0:
-                                                if not os.path.exists(dstbckfullfilename+'_'+str(n)):
-                                                    shutil.move(srcmvfullfilename, dstbckfullfilename+'_'+str(n), copy_function='copy2')
-                                                    logger.info('File backup di Exiftool Spostato da qui: %s a qui: %s',srcmvfullfilename, dstbckfullfilename+'_'+str(n))
-                                                    n=-1
+                                            n = 1
+                                            while n > 0:
+                                                if not os.path.exists(dstbckfullfilename + '_' + str(n)):
+                                                    shutil.move(srcmvfullfilename, dstbckfullfilename + '_' + str(n),
+                                                                copy_function='copy2')
+                                                    logger.info('File backup di Exiftool Spostato da qui: %s a qui: %s',
+                                                                srcmvfullfilename, dstbckfullfilename + '_' + str(n))
+                                                    n = -1
                                                 else:
-                                                    n+=1
+                                                    n += 1
                                     except Exception as ex:
-                                        logger.error('Errore spostamento file da qui: %s a qui: %s con questa motivazione: %s',srcmvfullfilename, dstbckfullfilename,str(ex))                                    
-                                logger.info("FILE %s_%s <Data-Ora Aggiornata> %s", id_log_counter_dir, id_log_counter,file)
+                                        logger.error(
+                                            'Errore spostamento file da qui: %s a qui: %s con questa motivazione: %s',
+                                            srcmvfullfilename, dstbckfullfilename, str(ex))
+                                logger.info("FILE %s_%s <Data-Ora Aggiornata> %s", id_log_counter_dir, id_log_counter,
+                                            file)
                             else:
                                 logger.error("<<PROBLEMA ESECUZIONE EXIF su file: %s ", file)
                                 self.globpropsHash['f_fixdate']['skipped'].append(file)
                         except Exception as e:
-                            logger.error("<<ERRORE SUL FILE: %s ERRORE: %s ",file,str(e))                        
-                        self.globpropsHash['f_fixdate']['tot_files'].append(file)            
+                            logger.error("<<ERRORE SUL FILE: %s ERRORE: %s ", file, str(e))
+                        self.globpropsHash['f_fixdate']['tot_files'].append(file)
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>", dir)
 
     def AvviaCheckArchivio(self, evt):
@@ -614,10 +622,10 @@ class PhotoManagerAppFrame(wx.Frame):
                                          str(id_log_counter_file), file.path)
                         srcfile = os.fsdecode(file)
                         logger.debug('Destinazione copia impostata su %s', self.destinazioneCopia.GetSelection())
-                        if self.destinazioneCopia.GetSelection() == 0:
-                            dstroot = self.globpropsHash['masterrepository_originals']
-                        if self.destinazioneCopia.GetSelection() == 1:
-                            dstroot = self.globpropsHash['masterrepository_lightroom']
+
+                        dstroot = self.globpropsHash['masterrepository_unknown_changes']
+
+
                         dstcamerafolder = "ProduttoreNonNoto\\ModelloNonNoto"
                         dstmaker = 'ProduttoreNonNoto'
                         dstmodel = 'ModelloNonNoto'
@@ -627,54 +635,123 @@ class PhotoManagerAppFrame(wx.Frame):
                         logger.debug('Cartella Giorno: day: %s', dstdayfolder)
                         dstext = os.path.splitext(file)[1].lower()
                         try:
-                            with Image.open(pathlib.Path(file)) as image:
-                                info = image.getexif()
-                                if info:
+
+
+
+
+                            with open(pathlib.Path(file),'rb') as image_exif:
+                                if image_exif:
                                     logger.debug("FILE %s_%s <ha exif tags> %s ", str(id_log_counter_dir),
                                                  str(id_log_counter_file), file.path)
-                                    for (tag, value) in info.items():
-                                        decoded = TAGS.get(tag, tag)
-                                        logger.debug("FILE %s_%s <EXIF_TAG> %s <DECODED_TAG> %s TAG_VALUE: ",
-                                                     str(id_log_counter_dir), str(id_log_counter_file), str(tag),
-                                                     TAGS.get(tag, tag)), str(info[tag])
+                                    exif_tags = exifread.process_file(image_exif)
+                                    originaldatetimetag='EXIF DateTimeOriginal'
+                                    originaldatetimevalue = ''
+                                    imagedatetimetag= 'Image DateTime'
+                                    imagedatetimevalue=''
+                                    makertag='Image Make'
+                                    makervalue=''
+                                    modeltag='Image Model'
+                                    modelvalue=''
+                                    if originaldatetimetag in exif_tags.keys():
+                                        originaldatetimevalue=str(exif_tags[originaldatetimetag])
                                         try:
-                                            if decoded == 'DateTime':
-                                                logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
-                                                             str(id_log_counter_dir), str(id_log_counter_file),
-                                                             dstyearfolder, dstmonthfolder)
-                                                dstyearfolder = time.strftime("%Y",
-                                                                              time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                                dstmonthfolder = time.strftime("%m",
-                                                                               time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                                dstdayfolder = time.strftime("%d",
-                                                                             time.strptime(value, "%Y:%m:%d %H:%M:%S"))
-                                                logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
-                                                             str(id_log_counter_dir), str(id_log_counter_file),
-                                                             dstyearfolder, dstmonthfolder)
+                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                                          str(id_log_counter_dir), str(id_log_counter_file),
+                                                         dstyearfolder, dstmonthfolder)
+                                            dstyearfolder = time.strftime("%Y",
+                                                                          time.strptime(originaldatetimevalue, "%Y:%m:%d %H:%M:%S"))
+                                            dstmonthfolder = time.strftime("%m",
+                                                                           time.strptime(originaldatetimevalue,
+                                                                                         "%Y:%m:%d %H:%M:%S"))
+                                            dstdayfolder = time.strftime("%d",
+                                                                         time.strptime(originaldatetimevalue, "%Y:%m:%d %H:%M:%S"))
+                                            logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                                         str(id_log_counter_dir), str(id_log_counter_file),
+                                                         dstyearfolder, dstmonthfolder)
+
+
+                                            # ESISTE ORIGINALE--> se modificata va in modified se no original
+                                            if imagedatetimetag in exif_tags.keys():
+                                                imagedatetimevalue = str(exif_tags[imagedatetimetag])
+                                                if imagedatetimevalue==originaldatetimevalue:
+                                                    self.globpropsHash['f_copia']['originals'].append(file.path)
+                                                    logger.debug('File %s ORIGINALE',file.path)
+                                                    dstroot = self.globpropsHash['masterrepository_originals']
+
+                                                else:
+                                                    logger.debug('File %s MODIFIED',file.path)
+                                                    self.globpropsHash['f_copia']['modified'].append(file.path)
+                                                    dstroot = self.globpropsHash['masterrepository_modified']
+
                                         except ValueError as ver:
-                                            logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s', file.path,
+                                            logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s',
+                                                         file.path,
                                                          str(ver))
                                             dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
                                             dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
                                             dstdayfolder = time.strftime("%d", time.gmtime(os.path.getmtime(file)))
-                                            logger.error('Valori di data destinazione ripristinati da nome file per il file  %s.',
-                                                         file.path)
+                                            logger.error(
+                                                'Valori di data destinazione ripristinati da nome file per il file  %s.',
+                                                file.path)
+                                            self.globpropsHash['f_copia']['change_unknown'].append(file.path)
+                                            logger.debug('File %s UNKNOWN CHANGE, but OriginalTAGS are present', file.path)
+
+
+                                    else:
+                                        if imagedatetimetag in exif_tags.keys():
+                                            imagedatetimevalue=str(exif_tags[imagedatetimetag])
+                                            try:
+
+                                                logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                                             str(id_log_counter_dir), str(id_log_counter_file),
+                                                             dstyearfolder, dstmonthfolder)
+                                                dstyearfolder = time.strftime("%Y",
+                                                                              time.strptime(imagedatetimevalue,
+                                                                                            "%Y:%m:%d %H:%M:%S"))
+                                                dstmonthfolder = time.strftime("%m",
+                                                                               time.strptime(imagedatetimevalue,
+                                                                                             "%Y:%m:%d %H:%M:%S"))
+                                                dstdayfolder = time.strftime("%d",
+                                                                             time.strptime(imagedatetimevalue,
+                                                                                           "%Y:%m:%d %H:%M:%S"))
+                                                logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
+                                                             str(id_log_counter_dir), str(id_log_counter_file),
+                                                             dstyearfolder, dstmonthfolder)
+                                                #NON ESISTE ORIGINALE, ma per me è originale (una data sola)
+                                                self.globpropsHash['f_copia']['modified'].append(file.path)
+
+                                            except ValueError as ver:
+                                                logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s',
+                                                             file.path,
+                                                             str(ver))
+                                                dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
+                                                dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
+                                                dstdayfolder = time.strftime("%d", time.gmtime(os.path.getmtime(file)))
+                                                logger.error(
+                                                    'Valori di data destinazione ripristinati da nome file per il file  %s.',
+                                                    file.path)
+                                                self.globpropsHash['f_copia']['change_unknown'].append(file.path)
+                                                logger.debug('File %s UNKNOWN CHANGE, but Modified TAGS  are present',
+                                                             file.path)
+                                    #SE SONO QUI NON SO SE ORIGINALE O NO
+                                    if makertag in exif_tags.keys():
                                         try:
-                                            if decoded == 'Make' and value != '':
-                                                dstmaker = value.strip().replace(' ', '')
-                                                dstcamerafolder = dstmaker
-                                                logger.debug("FILE %s_%s <PRODUTTORE:> %s", str(id_log_counter_dir),
-                                                             str(id_log_counter_file), dstmaker)
+                                            makervalue=str(exif_tags[makertag])
+                                            dstmaker = makervalue.strip().replace(' ', '')
+                                            dstcamerafolder = dstmaker
+                                            logger.debug("FILE %s_%s <PRODUTTORE:> %s", str(id_log_counter_dir),
+                                                         str(id_log_counter_file), dstmaker)
                                         except ValueError as verMaker:
                                             dstmaker = 'ProduttoreNonNoto'
                                             logger.error(
                                                 'Produttore reimpostato su non noto  per il file %s.',
                                                 file.path)
+                                    if modeltag in exif_tags.keys():
                                         try:
-                                            if decoded == 'Model' and value != '':
-                                                dstmodel = value.strip().replace(' ', '-')
-                                                logger.debug("FILE %s_%s <MODELLO:> %s", str(id_log_counter_dir),
-                                                             str(id_log_counter_file), dstmodel)
+                                            modelvalue=str(exif_tags[modeltag])
+                                            dstmodel = modelvalue.strip().replace(' ', '-')
+                                            logger.debug("FILE %s_%s <MODELLO:> %s", str(id_log_counter_dir),
+                                                         str(id_log_counter_file), dstmodel)
                                         except:
                                             dstmodel = 'ModelloNonNoto'
                                             logger.error(
@@ -694,13 +771,15 @@ class PhotoManagerAppFrame(wx.Frame):
                         if not os.path.exists(self.globpropsHash['masterrepository_bin']):
                             os.makedirs(self.globpropsHash['masterrepository_bin'])
                             logger.debug("FOLDER_CESTINO_ARCHIVIO: %s", self.globpropsHash['masterrepository_bin'])
-                        [dstdrive,dstfile_nodrive]=os.path.splitdrive(dstfile)
+                        [dstdrive, dstfile_nodrive] = os.path.splitdrive(dstfile)
                         try:
                             validate_filepath(dstfile_nodrive)
                         except ValidationError as ev:
-                            logger.error("FILE %s_%s <La Destinazione individuata per il file:> %s ha un problema, lo sposto negli scarti", str(id_log_counter_dir),
-                                         str(id_log_counter_file),file.path )
-                            dstfolder=self.globpropsHash['masterrepository_prob']
+                            logger.error(
+                                "FILE %s_%s <La Destinazione individuata per il file:> %s ha un problema, lo sposto negli scarti",
+                                str(id_log_counter_dir),
+                                str(id_log_counter_file), file.path)
+                            dstfolder = self.globpropsHash['masterrepository_prob']
                             dstfile = dstfolder + "\\" + md5filename + dstext
                             logger.error("******** DESTINAZIONE AGGIORNATA: ")
                         if not os.path.exists(dstfolder):
@@ -777,33 +856,40 @@ class PhotoManagerAppFrame(wx.Frame):
                 else:
                     id_log_counter_file = len(self.globpropsHash['f_checkiforiginal']['tot_files'])
                     self.gauge.SetValue(len(self.globpropsHash['f_checkiforiginal']['tot_files']))
-                    logger.debug("FILE %s_%s  <APERTURA FILE> %s", id_log_counter_dir, id_log_counter_file, str(file.path))
+                    logger.debug("FILE %s_%s  <APERTURA FILE> %s", id_log_counter_dir, id_log_counter_file,
+                                 str(file.path))
                     try:
                         with open(file, "rb") as fmd5:
                             md5filename = hashlib.file_digest(fmd5, "md5").hexdigest()
-                            
+
                             logger.debug("FILE %s_%s <md5 calcolato> %s", id_log_counter_dir, id_log_counter_file,
                                          md5filename)
                             ext = pathlib.Path(file).suffix
                             logger.debug("FILE %s_%s <extension calcolato> %s", id_log_counter_dir, id_log_counter_file,
-                                         ext)                            
-                            if file.name==(md5filename+ext):
+                                         ext)
+                            if file.name == (md5filename + ext):
                                 self.globpropsHash['f_checkiforiginal']['originals'].append(file.path)
-                                logger.debug('FILE %s_%s <Inserito nuovo file nella lista originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
-                                logger.info('FILE %s_%s <Inserito nuovo file nella lista originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
+                                logger.debug('FILE %s_%s <Inserito nuovo file nella lista originals:> %s',
+                                             id_log_counter_dir, id_log_counter_file, file.path)
+                                logger.info('FILE %s_%s <Inserito nuovo file nella lista originals:> %s',
+                                            id_log_counter_dir, id_log_counter_file, file.path)
                             else:
                                 self.globpropsHash['f_checkiforiginal']['not_originals'].append(file.path)
-                                logger.debug('FILE %s_%s <Inserito nuovo file nella lista NOT-originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
-                                logger.info('FILE %s_%s <Inserito nuovo file nella lista NOT-originals:> %s',id_log_counter_dir, id_log_counter_file, file.path)
+                                logger.debug('FILE %s_%s <Inserito nuovo file nella lista NOT-originals:> %s',
+                                             id_log_counter_dir, id_log_counter_file, file.path)
+                                logger.info('FILE %s_%s <Inserito nuovo file nella lista NOT-originals:> %s',
+                                            id_log_counter_dir, id_log_counter_file, file.path)
                             fmd5.close()
                             self.globpropsHash['f_checkiforiginal']['tot_files'].append(file.path)
                     except IOError as eio:
                         logger.error('ERRORE FILE errore %s', str(eio))
-                    logger.debug("FILE %s_%s <CHIUSURA FILE> %s", id_log_counter_dir, id_log_counter_file, str(file.path))                    
+                    logger.debug("FILE %s_%s <CHIUSURA FILE> %s", id_log_counter_dir, id_log_counter_file,
+                                 str(file.path))
                     self.gauge.SetValue(len(self.globpropsHash['f_checkarchivio']['tot_files']))
             dir_iterator.close()
             logger.debug("<<< %s >>> %s <<<FINE CARTELLA>>>", str(dir), id_log_counter_dir)
-            
+
+
 if __name__ == '__main__':
     logger = logging.getLogger('photoark')
     stdout = logging.StreamHandler()
