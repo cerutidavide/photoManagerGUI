@@ -170,11 +170,8 @@ class PhotoManagerAppFrame(wx.Frame):
         self.avviaCaricaListaEstensioni = wx.Button(self, label="Mostra estensioni file Cartella Selezionata",
                                                     pos=(360, 30), size=(345, -1))
         self.avviaCaricaListaEstensioni.Bind(wx.EVT_BUTTON, self.AvviaCaricaEstensioni)
-        self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 90), size=(345, -1))
+        self.avviaCopiaFile = wx.Button(self, label="Avvia Import In Archivio Master", pos=(360, 140), size=(345, -1))
         self.avviaCopiaFile.Bind(wx.EVT_BUTTON, self.AvviaCopiaFile)
-        self.destinazioneCopia = wx.RadioBox(self, label="Destinazione Copia:", majorDimension=2,
-                                             pos=(360, 120), size=(345, -1),
-                                             choices=["Originals", "Export Lightroom"])
         self.modoCopia = wx.RadioBox(self, label="Azione Su File IMPORTATI/SKIPPATI:", majorDimension=3,
                                      pos=(360, 180), size=(345, -1),
                                      choices=["nessuna azione", "cestino archivio", "cestino windows"])
@@ -182,17 +179,17 @@ class PhotoManagerAppFrame(wx.Frame):
                                             size=(345, -1))
         self.avviaCheckArchivio.Bind(wx.EVT_BUTTON, self.AvviaCheckArchivio)
 
-        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Orario Cartella Selezionata", pos=(360, 240),
+        self.avviaFixDateTime = wx.Button(self, label="Avvia Fix Orario Cartella Selezionata", pos=(360, 410),
                                           size=(345, -1))
         self.avviaFixDateTime.Bind(wx.EVT_BUTTON, self.AvviaFixDateTime)
         self.modoFixData = wx.RadioBox(self, label="Attraversare Sotto Cartelle Sì/No", majorDimension=2,
-                                       pos=(360, 280), size=(345, -1),
+                                       pos=(360, 440), size=(345, -1),
                                        choices=["Sì", "No"])
-        self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 340),
+        self.avviaRestore = wx.Button(self, label="Avvia Restore file _original dal folder selezionato", pos=(360, 320),
                                       size=(345, -1))
         self.avviaRestore.Bind(wx.EVT_BUTTON, self.AvviaRestore)
 
-        self.avviaCheckIfOriginal = wx.Button(self, label="Avvia CheckIfOriginal", pos=(360, 390),
+        self.avviaCheckIfOriginal = wx.Button(self, label="Avvia CheckIfOriginal", pos=(360, 360),
                                               size=(345, -1))
         self.avviaCheckIfOriginal.Bind(wx.EVT_BUTTON, self.AvviaCheckIfOriginal)
 
@@ -621,10 +618,10 @@ class PhotoManagerAppFrame(wx.Frame):
                             logger.debug("FILE %s_%s <è un file> %s Lo chiudo", str(id_log_counter_dir),
                                          str(id_log_counter_file), file.path)
                         srcfile = os.fsdecode(file)
-                        logger.debug('Destinazione copia impostata su %s', self.destinazioneCopia.GetSelection())
+
 
                         dstroot = self.globpropsHash['masterrepository_unknown_changes']
-
+                        logger.debug('Destinazione copia impostata su %s', dstroot)
 
                         dstcamerafolder = "ProduttoreNonNoto\\ModelloNonNoto"
                         dstmaker = 'ProduttoreNonNoto'
@@ -767,7 +764,7 @@ class PhotoManagerAppFrame(wx.Frame):
                         logger.debug("FILE %s_%s <Destinazione individuata:> %s", str(id_log_counter_dir),
                                      str(id_log_counter_file), dstfile)
                         logger.debug("FILE %s_%s <CopyMode:> %s", str(id_log_counter_dir), str(id_log_counter_file),
-                                     str(self.destinazioneCopia.GetSelection()))
+                                     dstroot)
                         if not os.path.exists(self.globpropsHash['masterrepository_bin']):
                             os.makedirs(self.globpropsHash['masterrepository_bin'])
                             logger.debug("FOLDER_CESTINO_ARCHIVIO: %s", self.globpropsHash['masterrepository_bin'])
