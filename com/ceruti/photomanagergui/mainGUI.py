@@ -125,7 +125,7 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_fotostat'] = dict()
         myHashGlob['f_fotostat']['tot_files'] = []
         myHashGlob['f_fotostat']['filelist'] = []
-        myHashGlob['f_fotostat']['stat_dict'] = dict()
+        myHashGlob['f_fotostat']['stat_tupledict'] = dict()
 
 
     return myHashGlob
@@ -577,8 +577,8 @@ class PhotoManagerAppFrame(wx.Frame):
                                 #NB cambiano a seconda della fotocamera--> raggruppare per fotocamera e poi per focale
 
                                 #RIPRENDI
-                                if file not in self.globpropsHash['f_fotostat']['stat_dict'].keys():
-                                    self.globpropsHash['f_fotostat']['stat_dict'][file]=[]
+                                if file not in self.globpropsHash['f_fotostat']['stat_tupledict'].keys():
+                                    self.globpropsHash['f_fotostat']['stat_tupledict'][file]=[]
                                     
 
                                 for chiave,valore in exif_tags.items():
@@ -586,9 +586,9 @@ class PhotoManagerAppFrame(wx.Frame):
                                     if chiave==modeltag:    
                                         tupla=(chiave,valore)
                                         logger.debug('Cerco di trovare la tupla...tupla[0]= %s tupla[1]= %s',tupla[0],tupla[1])
-                                        self.globpropsHash['f_fotostat']['stat_dict'][file].append(tupla)
+                                        self.globpropsHash['f_fotostat']['stat_tupledict'][file].append(tupla)
 
-                                        logger.debug('Cerco di trovare la tupla %s',str(self.globpropsHash['f_fotostat']['stat_dict'][file][0][1]))
+                                        logger.debug('Cerco di trovare la tupla %s',str(self.globpropsHash['f_fotostat']['stat_tupledict'][file][0][1]))
                                         logger.debug('File %s <Aggiungo chiave %s, valore %s >',file,chiave,valore)
 
 
