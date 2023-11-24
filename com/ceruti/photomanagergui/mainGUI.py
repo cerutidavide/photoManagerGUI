@@ -232,14 +232,29 @@ class PhotoManagerAppFrame(wx.Frame):
                                      str(k), self.globpropsHash[function][p][k])
                     outputmessage += '\n'
                 else:
-                    n = len(self.globpropsHash[function][p])
-                    outputmessage += '> ' + function + ' ' + p + ' (' + str(n) + ')\n'
-                    riepilogo += p + ' ' + str(n) + '\n'
-                    for v in self.globpropsHash[function][p]:
-                        outputmessage += str(n) + ' >> ' + v + '\n'
-                        logger.debug('****Funzione %s **** Parametro %s **** Valore %s', function, p, v)
-                        n -= 1
-                    outputmessage += '\n'
+                    match = re.search('_tupledict', p)
+                    if match:
+                        pass
+                        outputmessage += '> ' + function + ' ' + p + ' elementi distinti: ' + str(
+                        len(self.globpropsHash[function][p].keys())) + '\n'
+                        riepilogo += p + '-file distinti: ' + str(len(self.globpropsHash[function][p].keys()))
+                        for k, v in self.globpropsHash[function][p].items():
+                            #CI SIAMO MA FORMATTARE MEGLIO PER CSV E SOPRATTUTTO SCORRERE LA LISTA
+                            outputmessage += 'Chiave>> ' + k + ' >>Valore ' + str(v[0][0]) + str(v[0][1]) + '\n'
+                            logger.debug('****Funzione %s **** Parametro %s **** Chiave %s **** Valore %s', function, p,
+                                     str(k), self.globpropsHash[function][p][k])
+                        outputmessage += '\n'
+
+                        logger.debug('GESTIONE TUPLA')
+                    else:
+                        n = len(self.globpropsHash[function][p])
+                        outputmessage += '> ' + function + ' ' + p + ' (' + str(n) + ')\n'
+                        riepilogo += p + ' ' + str(n) + '\n'
+                        for v in self.globpropsHash[function][p]:
+                            outputmessage += str(n) + ' >> ' + v + '\n'
+                            logger.debug('****Funzione %s **** Parametro %s **** Valore %s', function, p, v)
+                            n -= 1
+                        outputmessage += '\n'
         else:
             logger.debug('****Funzione**** non definita %s', function)
             riepilogo = 'Impossibile mostrare output funzione eseguita'
