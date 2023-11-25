@@ -239,12 +239,11 @@ class PhotoManagerAppFrame(wx.Frame):
                         len(self.globpropsHash[function][p].keys())) + '\n'
                         riepilogo += p + '-file distinti: ' + str(len(self.globpropsHash[function][p].keys()))
                         for k, v in self.globpropsHash[function][p].items():
-                            #CI SIAMO MA FORMATTARE MEGLIO PER CSV E SOPRATTUTTO SCORRERE LA LISTA
-                            outputmessage += 'Chiave>> ' + k + ' >>Valore ' + str(v[0][0]) + str(v[0][1]) + '\n'
+                            for l in v:
+                                outputmessage += k +', '+str(l[0])+',' + str(l[1]) + '\n'
                             logger.debug('****Funzione %s **** Parametro %s **** Chiave %s **** Valore %s', function, p,
                                      str(k), self.globpropsHash[function][p][k])
                         outputmessage += '\n'
-
                         logger.debug('GESTIONE TUPLA')
                     else:
                         n = len(self.globpropsHash[function][p])
