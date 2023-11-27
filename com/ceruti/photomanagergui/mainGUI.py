@@ -276,9 +276,29 @@ class PhotoManagerAppFrame(wx.Frame):
             return riepilogo
         
         #Qui volendo potrei tentare di mostrare il csv
-
-
-        
+        #NB ho tutte le colonne (per definizione sono le chiavi di taglist_dict )
+        # Scorro il dict delle foto e per ogni foto scorro il dict delle tag.
+        #
+        outputmessage+='\n INIZIO CSV \n'
+        outputmessage+='File'
+        for headers in self.globpropsHash['f_fotostat']['taglist_dict'].keys():
+            outputmessage+=' , '+headers
+        outputmessage+='\n'
+        for fp in self.globpropsHash[function]:
+            match = re.search('_tupledict', fp)
+            if match:
+                logger.debug('TROVATA LA COLLEZIONE DI TUPLE')
+                
+                for f,d in self.globpropsHash[function]['stat_tupledict'].items():
+                    logger.debug('File: %s Dati: %s',f,d)
+                    outputmessage+=f
+                    for keytag in self.globpropsHash['f_fotostat']['taglist_dict'].keys():
+                        #scorro la lista dei dati d finchè trovo la tupla con [0]=keytag e prendo [1]
+                        for item in d:
+                            if item[0]==keytag:
+                                outputmessage+=' , '+str(item[1])
+                    outputmessage+='\n'
+        outputmessage+='\n FINE CSV \n'
         return outputmessage + riepilogo
 
     def CleanConfigFunction(self):
@@ -569,12 +589,19 @@ class PhotoManagerAppFrame(wx.Frame):
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>", dir)
     def convertvalue(self,inputvalue='',operation='none'):
         if operation=='fraction_to_decimal':
-            num,den=inputvalue.split(sep='/')
+            logger.debug('Risultato split: %s',inputvalue.split(sep='/'))
             try:
+                num,den=inputvalue.split(sep='/')
+            except ValueError as ver:
+                logger.error('Valore di input non è una frazione valida: %s motivo: %s',inputvalue,str(ver))                
+                return float(inputvalue)
+            logger.debug('Numeratore: %s',num) 
+            logger.debug('Denominatore: %s',den) 
+            try:
+                logger.debug('Sto per restituire il numero: float(float(num)/float(den)) %s',str(float(float(num)/float(den))))
                 return float(float(num)/float(den))
             except ValueError as ver:
-                logger.error('Valore di input non valido: %s motivo: %s',inputvalue,str(ver))
-                None
+                logger.error('Valore di input non valido: %s motivo: %s',inputvalue,str(ver))                
         return inputvalue
 
         
@@ -638,9 +665,9 @@ class PhotoManagerAppFrame(wx.Frame):
                                             tupla=(chiave,converted_value)
                                             logger.debug('Cerco di trovare la tupla...tupla[0]= %s tupla[1]= %s',tupla[0],tupla[1])
                                             self.globpropsHash['f_fotostat']['stat_tupledict'][file].append(tupla)
-                                            logger.info('File %s <Aggiungo chiave %s, valore %s >',file,chiave,valore)
+                                            logger.info('File %s <Aggiungo tupla [%s , %s] >',file,chiave,valore)
                                         except ValueError as ver:
-                                            logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s',file,str(ver))
+                                            logger.error('Valori in EXIF DATA non corretto nel file %s errore: %s',file,str(ver))
                     except UnidentifiedImageError as ime:
                         logger.error("Immagine Non identificata %s errore: %s", file.path, str(ime))
 
