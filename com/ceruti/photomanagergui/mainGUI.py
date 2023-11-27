@@ -125,9 +125,9 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_fotostat'] = dict()
         myHashGlob['f_fotostat']['tot_files'] = []
         myHashGlob['f_fotostat']['filelist'] = []
-        myHashGlob['f_fotostat']['taglist']=[]
+        myHashGlob['f_fotostat']['taglist_dict']=dict()
         myHashGlob['f_fotostat']['stat_tupledict'] = dict()
-
+        
                                 #   cr2
                                 #   ExposureTime --> Valore: 1/125 sembra corretto
                                 #    -->trasformare decimal
@@ -274,6 +274,11 @@ class PhotoManagerAppFrame(wx.Frame):
             riepilogo = 'Impossibile mostrare output funzione eseguita'
         if shortFMT:
             return riepilogo
+        
+        #Qui volendo potrei tentare di mostrare il csv
+
+
+        
         return outputmessage + riepilogo
 
     def CleanConfigFunction(self):
@@ -562,13 +567,36 @@ class PhotoManagerAppFrame(wx.Frame):
                             logger.error("<<ERRORE SUL FILE: %s ERRORE: %s ", file, str(e))
                         self.globpropsHash['f_fixdate']['tot_files'].append(file)
             logger.info("<<<FINE CARTELLA>>> <<< %s >>>", dir)
+    def convertvalue(self,inputvalue='',operation='none'):
+        if operation=='fraction_to_decimal':
+            num,den=inputvalue.split(sep='/')
+            try:
+                return float(float(num)/float(den))
+            except ValueError as ver:
+                logger.error('Valore di input non valido: %s motivo: %s',inputvalue,str(ver))
+                None
+        return inputvalue
 
+        
+        
+        
+        return output
     def AvviaFotoStat(self, evt):
         self.CleanConfigFunction()
         
-        self.globpropsHash['f_fotostat']['taglist']=['EXIF DateTimeOriginal','Image DateTime','Image Model','EXIF ExposureTime','EXIF FNumber','EXIF ExposureProgram','EXIF FocalLength']
-
-
+        
+        self.globpropsHash['f_fotostat']['taglist_dict']['Image Model']=['none']
+        self.globpropsHash['f_fotostat']['taglist_dict']['Image DateTime']=['none']
+        self.globpropsHash['f_fotostat']['taglist_dict']['EXIF DateTimeOriginal']=['none']
+        self.globpropsHash['f_fotostat']['taglist_dict']['EXIF ExposureTime']=['none']
+        self.globpropsHash['f_fotostat']['taglist_dict']['EXIF FNumber']=['fraction_to_decimal']
+        self.globpropsHash['f_fotostat']['taglist_dict']['EXIF ExposureProgram']=['none']
+        self.globpropsHash['f_fotostat']['taglist_dict']['EXIF FocalLength']=['fraction_to_decimal']
+        self.globpropsHash['f_fotostat']['taglist_dict']['EXIF FocalLengthIn35mmFilm']=['none']
+        
+        
+        
+        
         self.FotoStat(self.globpropsHash['selectedfolder'])
         self.gauge.SetValue(self.gauge.GetRange())
         self.outputWindow.SetValue(self.fileDictShow('f_fotostat'))
@@ -598,106 +626,23 @@ class PhotoManagerAppFrame(wx.Frame):
                                 if file not in self.globpropsHash['f_fotostat']['stat_tupledict'].keys():
                                     self.globpropsHash['f_fotostat']['stat_tupledict'][file]=[]
                                     
-                                #NON FUNZIONA LA CHIAVE FILE
+
                                 for chiave,valore in exif_tags.items():                                    
                                     #logger.debug('<EXIF TAGS> Chiave: %s --> Valore: %s',chiave,valore)
-                                    if chiave in self.globpropsHash['f_fotostat']['taglist']:
-                                        logger.debug('Elemento lista TAG interessanti Trovato: %s',chiave)
-                                        tupla=(chiave,valore)
-                                        logger.debug('Cerco di trovare la tupla...tupla[0]= %s tupla[1]= %s',tupla[0],tupla[1])
-                                        self.globpropsHash['f_fotostat']['stat_tupledict'][file].append(tupla)
-                                        logger.debug('File %s <Aggiungo chiave %s, valore %s >',file,chiave,valore)
-
-
-                                # if originaldatetimetag in exif_tags.keys():
-                                #     originaldatetimevalue=str(exif_tags[originaldatetimetag])
-                                #     try:
-                                #         if imagedatetimetag in exif_tags.keys():
-                                #             imagedatetimevalue = str(exif_tags[imagedatetimetag])
-                                #             dstyearfolder = time.strftime("%Y",
-                                #                                           time.strptime(originaldatetimevalue, "%Y:%m:%d %H:%M:%S"))
-                                #             dstmonthfolder = time.strftime("%m",
-                                #                                            time.strptime(originaldatetimevalue,
-                                #                                                          "%Y:%m:%d %H:%M:%S"))
-                                #             dstdayfolder = time.strftime("%d",
-                                #                                          time.strptime(originaldatetimevalue, "%Y:%m:%d %H:%M:%S"))
-
-                                #             logger.debug("FILE %s <Anno/Mese da DataFile <DATETIME ORIGINAL SENZA IMAGEMODIFY>:> %s / %s ",
-                                #                         str(id_log_counter_file),
-                                #                         dstyearfolder, dstmonthfolder)
-                                #             #self.globpropsHash['f_fotostat']['originals'].append(file)
-                                    # except ValueError as ver:
-                                    #     logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s',
-                                    #                     file,
-                                    #                     str(ver))
-                                    #     #self.globpropsHash['f_fotostat']['change_unknown'].append(file)
-                                    #     logger.debug('File %s UNKNOWN CHANGE, but OriginalTAGS are present', file)
-                                # else:
-                                #     if imagedatetimetag in exif_tags.keys():
-                                #         imagedatetimevalue=str(exif_tags[imagedatetimetag])
-                                #         try:
-                                #             logger.debug("FILE %s <Anno/Mese da DataFile:> %s / %s ",
-                                #                              str(id_log_counter_file),
-                                #                             dstyearfolder, dstmonthfolder)
-                                #             dstyearfolder = time.strftime("%Y",
-                                #                                             time.strptime(imagedatetimevalue,
-                                #                                                         "%Y:%m:%d %H:%M:%S"))
-                                #             dstmonthfolder = time.strftime("%m",
-                                #                                             time.strptime(imagedatetimevalue,
-                                #                                                             "%Y:%m:%d %H:%M:%S"))
-                                #             dstdayfolder = time.strftime("%d",
-                                #                                             time.strptime(imagedatetimevalue,
-                                #                                                         "%Y:%m:%d %H:%M:%S"))
-                                #             logger.debug("FILE %s_%s <Anno/Mese da DataFile:> %s / %s ",
-                                #                             str(id_log_counter_file),
-                                #                             dstyearfolder, dstmonthfolder)
-                                #             #self.globpropsHash['f_fotostat']['modified'].append(file.path)
-
-                                #         except ValueError as ver:
-                                #             logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s',
-                                #                             file,
-                                #                             str(ver))
-                                #             dstyearfolder = time.strftime("%Y", time.gmtime(os.path.getmtime(file)))
-                                #             dstmonthfolder = time.strftime("%m", time.gmtime(os.path.getmtime(file)))
-                                #             dstdayfolder = time.strftime("%d", time.gmtime(os.path.getmtime(file)))
-                                #             logger.error(
-                                #                 'Valori di data destinazione ripristinati da nome file per il file  %s.',
-                                #                 file.path)
-                                #             #self.globpropsHash['f_fotostat']['change_unknown'].append(file.path)
-                                #             logger.debug('File %s UNKNOWN CHANGE, but Modified TAGS  are present',
-                                #                             file)
-                                # if makertag in exif_tags.keys():
-                                #     try:
-                                #         makervalue=str(exif_tags[makertag])
-                                #         dstmaker = makervalue.strip().replace(' ', '')
-                                #         dstcamerafolder = dstmaker
-                                #         logger.debug("FILE %s <PRODUTTORE:> %s", 
-                                #                         str(id_log_counter_file), dstmaker)
-                                #     except ValueError as verMaker:
-                                #         dstmaker = 'ProduttoreNonNoto'
-                                #         logger.error(
-                                #             'Produttore reimpostato su non noto  per il file %s.',
-                                #             file)
-                                # if modeltag in exif_tags.keys():
-                                #     try:
-                                #         modelvalue=str(exif_tags[modeltag])
-                                #         dstmodel = modelvalue.strip().replace(' ', '-')
-                                #         logger.debug("FILE %s <MODELLO:> %s", 
-                                #                         str(id_log_counter_file), dstmodel)
-                                #     except:
-                                #         dstmodel = 'ModelloNonNoto'
-                                #         logger.error(
-                                #             'Modello  reimpostato su non noto  per il file %s.',
-                                #             file.path)
-                                #dstcamerafolder = dstmaker + "\\" + dstmodel
-#                                logger.debug("FILE %s <FOTOCAMERA:> %s", 
-#                                               str(id_log_counter_file), dstcamerafolder)
+                                    if chiave in self.globpropsHash['f_fotostat']['taglist_dict'].keys():
+                                        logger.debug('Elemento lista TAG interessanti Trovato: %s, valore: %s',chiave,valore)
+                                        try: 
+                                            operation=self.globpropsHash['f_fotostat']['taglist_dict'][chiave][0]
+                                            value=str(valore)
+                                            converted_value=self.convertvalue(value,operation)
+                                            tupla=(chiave,converted_value)
+                                            logger.debug('Cerco di trovare la tupla...tupla[0]= %s tupla[1]= %s',tupla[0],tupla[1])
+                                            self.globpropsHash['f_fotostat']['stat_tupledict'][file].append(tupla)
+                                            logger.info('File %s <Aggiungo chiave %s, valore %s >',file,chiave,valore)
+                                        except ValueError as ver:
+                                            logger.error('Valori in EXIF DATE non corretti nel file %s errore: %s',file,str(ver))
                     except UnidentifiedImageError as ime:
                         logger.error("Immagine Non identificata %s errore: %s", file.path, str(ime))
-
-
-
-
 
     def AvviaCheckArchivio(self, evt):
         self.CleanConfigFunction()
