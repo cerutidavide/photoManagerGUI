@@ -31,13 +31,10 @@ import exifread
 # CREA LISTA trascura sempre tutti i file _original nella lista di file da trattare e ne crea una lista "da spostare" le altre procedure, prima di partire spostano i file con una procedura ad hoc che sposta i file _original sotto backup_timestamp aggiungeno n ad ogni copia del file con lo stesso nome
 
 
-# TODO SCANDIR con file che si modificano non funziona-->creare lista statica di file da processare con Exiftool!!!!!!
-# TODO CHECK APERTURA FILE IN LETTURA O SCRITTURA!!!!
 # TODO potrebbe avere senso salvare lista immagini non riconosciute
 # TODO gestione immagini non riconosciute con Exiftool
 # TODO valutare "con e senza exif tool"
 # TODO conteggio Immagini non identificate e lista dei file non identificati da (eventualemente) pulire
-# TODO LOG SU FILE
 # TODO sistemare pulsanti e barre di avanzamento
 # TODO EXIF SET GPS DATA ORA
 # TODO valutare database per statistiche
@@ -82,7 +79,6 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_copia']['tot_files'] = []
         myHashGlob['f_copia']['tot_dirs'] = []
         myHashGlob['f_copia']['importdir_error'] = []
-
         myHashGlob['f_listaestensioni'] = dict()
         myHashGlob['f_checkarchivio'] = dict()
         myHashGlob['f_checkarchivio']['tot_dirs'] = []
@@ -127,21 +123,6 @@ def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
         myHashGlob['f_fotostat']['filelist'] = []
         myHashGlob['f_fotostat']['taglist_dict']=dict()
         myHashGlob['f_fotostat']['stat_tupledict'] = dict()
-        
-                                #   cr2
-                                #   ExposureTime --> Valore: 1/125 sembra corretto
-                                #    -->trasformare decimal
-                                #   ExposureProgram ok, stringa
-                                #   ISOSpeedRatings ok
-                                #   ApertureValue da calcolare con exp e radice
-                                #    ok
-                                #NB cambiano a seconda della fotocamera--> raggruppare per fotocamera e poi per focale
-
-
-
-
-
-
     return myHashGlob
 
 
@@ -1042,7 +1023,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
