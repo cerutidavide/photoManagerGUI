@@ -130,13 +130,6 @@ class PhotoManagerAppFrame(wx.Frame):
     def __init__(self, parent, title, *args, **kw):
         super().__init__(*args, **kw)
         wx.Panel.__init__(self, parent, title=title, size=(725, 700))
-
-        # sizer = wx.BoxSizer(wx.VERTICAL)
-        # sizer.Add(wx.Button(self, -1, 'An extremely long button text'), 0, 0, 0)
-        # sizer.Add(wx.Button(self, -1, 'Small button'), 0, 0, 0)
-        # sizer.
-        # self.SetSizer(sizer)
-
         max_gauge_size = 700
         if (os.path.exists("C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master")):
             self.basePath = "C:\\Users\\c333053\\Dev\\photoArchiveManagerGUI-master"
