@@ -26,7 +26,7 @@ import exifread
 #   gestione input --> aggiungere date picker e time picker per adesso delta in ore e fisso
 #   esempio >exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
 #   exiftool "-ModifyDate+=5:10:2 10:48:0" "-CreateDate+=5:10:2 10:48:0" "-DateTimeOriginal+=5:10:2 10:48:0" 00ce786eba035fc254739a7f54bb2867.cr2
-
+#prova nuovo repo git
 
 # CREA LISTA trascura sempre tutti i file _original nella lista di file da trattare e ne crea una lista "da spostare" le altre procedure, prima di partire spostano i file con una procedura ad hoc che sposta i file _original sotto backup_timestamp aggiungeno n ad ogni copia del file con lo stesso nome
 
