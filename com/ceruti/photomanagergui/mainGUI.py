@@ -42,8 +42,6 @@ import exifread
 # TODO Impacchettare appliczione
 # TODO valutare/verificare multiplatform
 # TODO provare a pensare "immagini simili" e.g.  librerie AI di analisi immagini...
-def davide():
-    pass
 def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                                  filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
