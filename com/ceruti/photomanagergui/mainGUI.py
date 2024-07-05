@@ -1016,7 +1016,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
