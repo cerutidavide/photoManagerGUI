@@ -42,7 +42,8 @@ import exifread
 # TODO Impacchettare appliczione
 # TODO valutare/verificare multiplatform
 # TODO provare a pensare "immagini simili" e.g.  librerie AI di analisi immagini...
-
+def davide():
+    pass
 def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
                                  filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
@@ -367,7 +368,7 @@ class PhotoManagerAppFrame(wx.Frame):
                     try:
                         fmd5 = open(file, "rb")
                         logger.debug("FILE %s_%s %s <Aperto>", id_log_counter_dir, id_log_counter, file.path)
-                        match = re.search('.*_(.*)\.', str(file.name))
+                        match = re.search('.*_(.*)\\.', str(file.name))
                         if match:
                             logger.debug("FILE %s_%s <md5 ricavato nome file> %s", id_log_counter_dir, id_log_counter,
                                          match[1])
@@ -963,6 +964,7 @@ class PhotoManagerAppFrame(wx.Frame):
         self.gauge.SetValue(0)
         self.CleanConfigFunction()
 
+    #In realtà controllo solo se il nome è uguale all'md5 cioè ha senso solo per file dentro l'archivio e mi dice se sono stati modificati dopo la copia del file e il relativo calcolo dell'md5
     def CheckIfOriginal(self, dir="C:\\Users\\c333053\\TestImport"):
         self.globpropsHash['f_checkiforiginal']['tot_dirs'].append(dir)
         id_log_counter_dir = len(self.globpropsHash['f_checkiforiginal']['tot_dirs'])
@@ -1016,7 +1018,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
