@@ -744,7 +744,6 @@ class PhotoManagerAppFrame(wx.Frame):
 
                         dstroot = self.globpropsHash['masterrepository_unknown_changes']
                         logger.debug('Destinazione copia impostata su %s', dstroot)
-
                         dstcamerafolder = "ProduttoreNonNoto\\ModelloNonNoto"
                         dstmaker = 'ProduttoreNonNoto'
                         dstmodel = 'ModelloNonNoto'
@@ -783,8 +782,6 @@ class PhotoManagerAppFrame(wx.Frame):
                                             logger.debug("FILE %s_%s <Anno/Mese da DataFile <DATETIME ORIGINAL>:> %s / %s ",
                                                          str(id_log_counter_dir), str(id_log_counter_file),
                                                          dstyearfolder, dstmonthfolder)
-
-
                                             # ESISTE ORIGINALE--> se modificata va in modified se no original
                                             if imagedatetimetag in exif_tags.keys():
                                                 imagedatetimevalue = str(exif_tags[imagedatetimetag])
@@ -1016,7 +1013,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
