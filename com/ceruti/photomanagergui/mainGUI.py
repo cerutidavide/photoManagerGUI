@@ -42,7 +42,7 @@ import exifread
 # TODO Impacchettare appliczione
 # TODO valutare/verificare multiplatform
 # TODO provare a pensare "immagini simili" e.g.  librerie AI di analisi immagini...
-def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Davide\\photoManagerGUI',
+def LoadPropertiesAndInitArchive(basePath='c:\\Utenti\\Public\\Documents',
                                  filenameGlob="default.props", filenameMstr=".masterrepository.conf"):
     myHashGlob = {}
     myHashGlob['fileconfprincipale'] = filenameGlob
@@ -500,11 +500,11 @@ class PhotoManagerAppFrame(wx.Frame):
                     id_log_counter = str(len(self.globpropsHash['f_fixdate']['tot_files']))
                     logger.debug("FILE %s_%s <INIZIO> %s", id_log_counter_dir, id_log_counter, file)
                     with exiftool.ExifTool() as et:
-                        # Al momento fisso a +7 ore
-                        deltaDateTime = '00:00:00 07:00:00'
-                        exiftoolModDatePar = '-ModifyDate+=\"' + deltaDateTime + '\"'
-                        exiftoolCreateDatePar = '-CreateDate+=\"' + deltaDateTime + '\"'
-                        exiftoolOrigDatePar = '-DateTimeOriginal+=\"' + deltaDateTime + '\"'
+                        # Al momento fisso a -9 ore
+                        deltaDateTime = '00:00:00 09:00:00'
+                        exiftoolModDatePar = '-ModifyDate-=\"' + deltaDateTime + '\"'
+                        exiftoolCreateDatePar = '-CreateDate-=\"' + deltaDateTime + '\"'
+                        exiftoolOrigDatePar = '-DateTimeOriginal-=\"' + deltaDateTime + '\"'
                         logger.debug("FILE %s_%s <EXIFTOOL PARAMETRI: %s, %s, %s, > ", id_log_counter_dir,
                                      id_log_counter, exiftoolModDatePar, exiftoolCreateDatePar, exiftoolOrigDatePar)
                         try:
@@ -533,9 +533,9 @@ class PhotoManagerAppFrame(wx.Frame):
                                         os.makedirs(dstbckfoldername)
                                     try:
                                         if not os.path.exists(dstbckfullfilename):
-                                            shutil.move(srcmvfullfilename, dstbckfullfilename, copy_function='copy2')
-                                            logger.info('File backup di Exiftool Spostato da qui: %s a qui: %s',
+                                            logger.info('File backup di Exiftool va spostatp da qui: %s a qui: %s',
                                                         srcmvfullfilename, dstbckfullfilename)
+                                            shutil.move(srcmvfullfilename, dstbckfullfilename, copy_function='copy2')
                                         else:
                                             n = 1
                                             while n > 0:
@@ -1013,7 +1013,7 @@ if __name__ == '__main__':
     fmt = logging.Formatter("%(asctime)s - %(levelname)s - [%(lineno)s-%(funcName)s()] %(message)s")
     stdout.setFormatter(fmt)
     logger.addHandler(stdout)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.propagate = False
     logger.debug('Inizializzazione LOG completa')
     PhotoManagerApp = wx.App()
